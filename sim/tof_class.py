@@ -962,7 +962,7 @@ class kinect_real_tf:
 		# response graph
 		self.dtype= tf.float32
 		self.rg = self.res_graph()
-		self.dir = 'params/kinect/'
+		self.dir = '../params/kinect/'
 
 		# delay map
 		self.cam['delay'] = np.loadtxt(self.dir+'delay.txt',delimiter=',')
@@ -2470,7 +2470,7 @@ class kinect_real_tf:
 class deeptof(kinect_real_tf):
 	def __init__(self):
 		cam = {}
-		self.dir = 'params/deeptof/'
+		self.dir = '../params/deeptof/'
 
 		# camera dict
 		cam['dimx'] = 512
@@ -2726,7 +2726,7 @@ class deeptof(kinect_real_tf):
 class phasor(kinect_real_tf):
 	def __init__(self):
 		cam = {}
-		self.dir = 'params/phasor/'
+		self.dir = '../params/phasor/'
 
 		# camera dict
 		cam['dimx'] = 512

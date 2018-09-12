@@ -1,5 +1,7 @@
 # this code simulates the time-of-flight data
 # all time unit are picoseconds (1 picosec = 1e-12 sec)
+import sys
+sys.path.insert(0,'../sim/')
 import numpy as np
 import os, json, glob
 import imageio
@@ -26,11 +28,13 @@ from tensorflow.contrib import learn
 from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
 tf.logging.set_verbosity(tf.logging.INFO)
 
-from tof_net import leaky_relu
+
 from vis_flow import *
 from kinect_init import *
+from data_augments import *
 
 PI = 3.14159265358979323846
+raw_depth_new = 0
 flg = False
 
 dtype = tf.float32
@@ -42,22 +46,22 @@ def metric_valid(depth, gt, msk):
 
 def select_objects():
     check = False
-    data_dir = '../FLAT/kinect/full/'
-    test_dir = '../FLAT/trans_render/'
+    data_dir = '../FLAT/kinect/'
+    array_dir = '../FLAT/trans_render/static/'
 
     # background is selected from far corners
-    f = open('../FLAT/kinect/list/motion-background.txt','r')
+    f = open('../FLAT/kinect/list/motion_background.txt','r')
     message = f.read()
     files = message.split('\n')
     trains = files[0:-1]
-    back_scenes = [data_dir+train[-23:-7] for train in trains]
+    back_scenes = [data_dir+train for train in trains]
 
     # foreground is selected from objects
-    f = open('../FLAT/kinect/list/scenes-test.txt','r')
+    f = open('../FLAT/kinect/list/motion_foreground.txt','r')
     message = f.read()
     files = message.split('\n')
     trains = files[0:-1]
-    fore_scenes = [data_dir+train[-23:-7] for train in trains]
+    fore_scenes = [data_dir+train for train in trains]
 
     
     while(check==False):
@@ -72,7 +76,7 @@ def select_objects():
         depths = []
         msks = []
         for scene in scenes:
-            with open(test_dir[0:-1]+'-gt/'+scene[-16::],'rb') as f:
+            with open(scene[0:-16]+'gt/'+scene[-16::],'rb') as f:
                 gt=np.fromfile(f, dtype=np.float32)
             depths.append(np.reshape(gt,(424*4,512*4)))
             msks.append((depths[-1]==0)*99999)
@@ -95,8 +99,7 @@ def select_objects():
 
     return scenes
 
-def data_augment_th(scene_ns, test_dir, tof_cam):
-    # first loading each scene, and we will combine them then
+def data_augment_th(scene_ns, array_dir, tof_cam, text_flg = False): # first loading each scene, and we will combine them then
     meass = []
     depths = []
     msks = []
@@ -105,22 +108,22 @@ def data_augment_th(scene_ns, test_dir, tof_cam):
         print('Augmenting scene', scene_n)
         ## load all data
         # if the raw file does not exist, just find one and use
-        if not os.path.exists(test_dir+scene_n[-16:]+'.pickle'):
-            scenes = glob.glob(test_dir+'*.pickle')
+        if not os.path.exists(array_dir+scene_n[-16:]+'.pickle'):
+            scenes = glob.glob(array_dir+'*.pickle')
             with open(scenes[0],'rb') as f:
                 data = pickle.load(f)
             cam = data['cam']
 
             # separately read the true depth and true rendering
-            with open(test_dir[0:-1]+'-gt/'+scene_n[-16::],'rb') as f:
+            with open(scene_n[0:-16]+'gt/'+scene_n[-16::],'rb') as f:
                 gt=np.fromfile(f, dtype=np.float32)
             depth_true = np.reshape(gt,(cam['dimy']*4,cam['dimx']*4))
 
-            with open(test_dir[0:-1]+'-ideal/'+scene_n[-16::],'rb') as f:
+            with open(scene_n[0:-16]+'ideal/'+scene_n[-16::],'rb') as f:
                 meas_gt=np.fromfile(f, dtype=np.int32)
             meas_gt = np.reshape(meas_gt,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
         else:
-            with open(test_dir+scene_n[-16::]+'.pickle','rb') as f:
+            with open(array_dir+scene_n[-16::]+'.pickle','rb') as f:
                 data = pickle.load(f)
             program = data['program']
             cam = data['cam']
@@ -133,7 +136,7 @@ def data_augment_th(scene_ns, test_dir, tof_cam):
             meas_gt = res_gt['meas']
 
         # directly read pregenerate raw measurement
-        with open(scene_n,'rb') as f:
+        with open(scene_n[0:-16]+'full/'+scene_n[-16::],'rb') as f:
             meas=np.fromfile(f, dtype=np.int32)
         meas = np.reshape(meas,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
         msk = kinect_mask().astype(np.float32)
@@ -151,7 +154,7 @@ def data_augment_th(scene_ns, test_dir, tof_cam):
         depth_true_s = tof_cam.dist_to_depth(depth_true_s)
 
         # load the mask and classification
-        with open(test_dir[0:-1]+'-msk'+'/'+scene_n[-16:],'rb') as f:
+        with open(scene_n[0:-16]+'msk'+'/'+scene_n[-16:],'rb') as f:
             msk_array=np.fromfile(f, dtype=np.float32)
         msk_array = np.reshape(msk_array,(cam['dimy'],cam['dimx'],4))
         msk = {}
@@ -171,16 +174,20 @@ def data_augment_th(scene_ns, test_dir, tof_cam):
         depth_true_s = depth_true_s[20:-20,:]
         msk = msk_true_s[20:-20,:]
 
-        # add textures (simply multiply a ratio)
-        texts = glob.glob('../FLAT/kinect/list/textures-curet/'+'*.png')
-        idx = np.random.choice(len(texts),1,replace=False)[0]
-        im_text = cv2.imread(texts[idx],0).astype(np.float32)
-        im_text /= 255.
-        lo = np.random.uniform(0,1) # random range
-        hi = np.random.uniform(lo,1)
-        im_text = im_text * (hi-lo) + lo
-        im_text = scipy.misc.imresize(im_text,meas.shape[0:2],mode='F')
-        im_text = np.expand_dims(im_text,-1)
+        if text_flg == True:
+            # add textures (simply multiply a ratio)
+            texts = glob.glob('../params/kinect/textures-curet/'+'*.png')
+            idx = np.random.choice(len(texts),1,replace=False)[0]
+            im_text = cv2.imread(texts[idx],0).astype(np.float32)
+            im_text /= 255.
+            lo = np.random.uniform(0,1) # random range
+            hi = np.random.uniform(lo,1)
+            im_text = im_text * (hi-lo) + lo
+            im_text = scipy.misc.imresize(im_text,meas.shape[0:2],mode='F')
+            im_text = np.expand_dims(im_text,-1)
+
+            # apply the texture
+            meas = meas * im_text
 
         # randomly generating an in image velocity
         v = np.random.rand(2)
@@ -205,9 +212,6 @@ def data_augment_th(scene_ns, test_dir, tof_cam):
                 ((1-th[0,0])*yy-th[0,1]*xx-th[0,2])**2 + \
                 ((1-th[1,1])*xx-th[1,0]*yy-th[1,2])**2
             )*msk
-
-        # apply the texture
-        # meas = meas * im_text
 
         # append the data
         meass.append(meas)
@@ -333,96 +337,7 @@ def data_augment_th(scene_ns, test_dir, tof_cam):
     # the input of the networka
     return meas, true, meass_old, depths_new
 
-def data_augment_real(scene_n, test_dir, tof_cam):
-    print('Augmenting scene', scene_n)
-    ## load all data
-    # if the raw file does not exist, just find one and use
-    if not os.path.exists(test_dir+scene_n[-16:]+'.pickle'):
-        scenes = glob.glob(test_dir+'*.pickle')
-        with open(scenes[0],'rb') as f:
-            data = pickle.load(f)
-        cam = data['cam']
-
-        # separately read the true depth and true rendering
-        with open(test_dir[0:-1]+'-gt/'+scene_n[-16::],'rb') as f:
-            gt=np.fromfile(f, dtype=np.float32)
-        depth_true = np.reshape(gt,(cam['dimy']*4,cam['dimx']*4))
-
-        with open(test_dir[0:-1]+'-ideal/'+scene_n[-16::],'rb') as f:
-            meas_gt=np.fromfile(f, dtype=np.int32)
-        meas_gt = np.reshape(meas_gt,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
-    else:
-        with open(test_dir+scene_n[-16::]+'.pickle','rb') as f:
-            data = pickle.load(f)
-        program = data['program']
-        cam = data['cam']
-        cam_t = data['cam_t']
-        scene = data['scene']
-        depth_true = data['depth_true']
-        prop_idx = data['prop_idx']
-        prop_s = data['prop_s'] 
-        res_gt = tof_cam.process_gt_delay_vig_dist_surf_mapmax(cam, prop_idx, prop_s, scene, depth_true)
-        meas_gt = res_gt['meas']
-
-    # directly read pregenerate raw measurement
-    with open(scene_n,'rb') as f:
-        meas=np.fromfile(f, dtype=np.int32)
-    meas = np.reshape(meas,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
-    msk = kinect_mask().astype(np.float32)
-    meas = [meas[:,:,i]*msk/tof_cam.cam['map_max'] for i in range(meas.shape[-1])]
-    meas_gt = [meas_gt[:,:,i]*msk/tof_cam.cam['map_max'] for i in range(meas_gt.shape[-1])]
-    meas = np.stack(meas, -1)
-    meas_gt = np.stack(meas_gt, -1)
-
-    # reduce the resolution of the depth
-    depth_true_s = scipy.misc.imresize(\
-        depth_true,\
-        meas.shape[0:2],\
-        mode='F'\
-    )
-    depth_true_s = tof_cam.dist_to_depth(depth_true_s)
-
-    # load the mask and classification
-    with open(test_dir[0:-1]+'-msk'+'/'+scene_n[-16:],'rb') as f:
-        msk_array=np.fromfile(f, dtype=np.float32)
-    msk_array = np.reshape(msk_array,(cam['dimy'],cam['dimx'],4))
-    msk = {}
-    msk['background'] = msk_array[:,:,0]
-    msk['edge'] = msk_array[:,:,1]
-    msk['noise'] = msk_array[:,:,2]
-    msk['reflection'] = msk_array[:,:,3]
-
-    # compute mask
-    msk_true_s = msk['background'] * msk['edge']
-
-    # # add textures (simply multiply a ratio)
-    # texts = glob.glob('../FLAT/kinect/list/textures-curet/'+'*.png')
-    # idx = np.random.choice(len(texts),1,replace=False)[0]
-    # im_text = cv2.imread(texts[idx],0).astype(np.float32)
-    # im_text /= 255.
-    # lo = np.random.uniform(0,1) # random range
-    # hi = np.random.uniform(lo,1)
-    # im_text = im_text * (hi-lo) + lo
-    # im_text = scipy.misc.imresize(im_text,meas.shape[0:2],mode='F')
-    # im_text = np.expand_dims(im_text,-1)
-
-    # # apply the texture
-    # meas = meas * im_text
-    # meas_gt = meas_gt * im_text
-
-    # true = np.stack([depth_true_s, msk_true_s],-1)
-    true = np.concatenate([meas_gt, meas_gt], -1)
-
-    # cut the regions
-    meas = meas[20:-20,:,:]
-    true = true[20:-20,:,:]
-    depth_true_s = depth_true_s[20:-20,:]
-    msk_true_s = msk_true_s[20:-20,:]
-
-    # the input of the network
-    return meas, true, meas, depth_true_s
-
-def testing_syn_motion(tests, test_dir, output_dir, tof_cam, tof_net):
+def testing_syn_motion(tests, array_dir, output_dir, tof_cam, tof_net):
     # testing
     errs = []
     errs_base = []
@@ -439,7 +354,7 @@ def testing_syn_motion(tests, test_dir, output_dir, tof_cam, tof_net):
         for i in range(len(te_idx)):
             if np.mod(i,10)==0:
                 scenes = select_objects()
-            x_te,y_te,x_tr,z_gt = data_augment_th(scenes, test_dir, tof_cam)
+            x_te,y_te,x_tr,z_gt = data_augment_th(scenes, array_dir, tof_cam)
             x.append(x_te)
             y.append(y_te)
             x_true.append(x_tr)
@@ -546,14 +461,18 @@ def testing_syn_motion(tests, test_dir, output_dir, tof_cam, tof_net):
                 fig.add_subplot(2,2,1)
                 plt.imshow(x_or1)
                 plt.title('Before align error: '+('%4f' % err_wo)+'.')
+                plt.axis('off')
                 fig.add_subplot(2,2,2)
                 plt.imshow(im_v_gt)
+                plt.axis('off')
                 fig.add_subplot(2,2,3)
                 plt.imshow(x_new1)
                 plt.title('After align error: '+('%4f' % err_w)+'.')
+                plt.axis('off')
                 fig.add_subplot(2,2,4)
                 plt.imshow(im_v_pred)
                 plt.title('Mean error: '+('%.2f' % err)+' pixels.')
+                plt.axis('off')
                             
                 name = int(np.random.uniform()*1e10)
                 plt.savefig(\
@@ -576,6 +495,7 @@ def testing_syn_motion(tests, test_dir, output_dir, tof_cam, tof_net):
             for i in range(9):
                 ax=fig.add_subplot(3,3,i+1)
                 plt.imshow(x_or[0,:,:,i])
+                plt.axis('off')
             plt.savefig(\
                 output_dir+str(name)+'.png',
                 bbox_inches='tight',
@@ -588,6 +508,7 @@ def testing_syn_motion(tests, test_dir, output_dir, tof_cam, tof_net):
             for i in range(9):
                 ax=fig.add_subplot(3,3,i+1)
                 plt.imshow(x_warped[0,:,:,i])
+                plt.axis('off')
             plt.savefig(\
                 output_dir+str(name)+'.png',
                 bbox_inches='tight',
@@ -631,36 +552,44 @@ def testing_syn_motion(tests, test_dir, output_dir, tof_cam, tof_net):
             msk = depth_or > 0.5
             err = np.sum(np.abs(depth_or - z_gt)*msk)/np.sum(msk)
             plt.title('Original raw, err: '+'%.4f'%err+'m')
+            plt.axis('off')
 
             ax = fig.add_subplot(2,4,2)
             plt.imshow((depth_or - z_gt)*msk, vmin=-0.1,vmax=0.1)
+            plt.axis('off')
 
             ax = fig.add_subplot(2,4,3)
             plt.imshow(depth,vmin=vmin,vmax=vmax)
             msk = depth > 0.5
             err = np.sum(np.abs(depth - z_gt)*msk)/np.sum(msk)
             plt.title('Corrected raw, err: '+'%.4f'%err+'m')
+            plt.axis('off')
 
             ax = fig.add_subplot(2,4,4)
             plt.imshow((depth - z_gt)*msk, vmin=-0.1,vmax=0.1)
+            plt.axis('off')
 
             ax = fig.add_subplot(2,4,5)
             plt.imshow(depth_gt,vmin=vmin,vmax=vmax)
             msk = depth_gt > 0.5
             err = np.sum(np.abs(depth_gt - z_gt)*msk)/np.sum(msk)
             plt.title('Ground truth raw, err: '+'%.4f'%err+'m')
+            plt.axis('off')
 
             ax = fig.add_subplot(2,4,6)
             plt.imshow((depth_gt - z_gt)*msk, vmin=-0.1,vmax=0.1)
+            plt.axis('off')
 
             ax = fig.add_subplot(2,4,7)
             plt.imshow(z_gt,vmin=vmin,vmax=vmax)
             plt.title('Ground truth raw')
+            plt.axis('off')
             plt.colorbar()
 
             ax = fig.add_subplot(2,4,8)
             plt.imshow((z_gt - z_gt)*msk, vmin=-0.1,vmax=0.1)
             plt.colorbar()         
+            plt.axis('off')
 
             name = int(np.random.uniform()*1e10)
             plt.savefig(\
@@ -671,7 +600,7 @@ def testing_syn_motion(tests, test_dir, output_dir, tof_cam, tof_net):
 
     return
 
-def testing_real_motion(tests, test_dir, output_dir, tof_cam, tof_net):
+def testing_real_motion(tests, array_dir, output_dir, tof_cam, tof_net):
     # testing
     errs = []
     errs_base = []
@@ -688,8 +617,8 @@ def testing_real_motion(tests, test_dir, output_dir, tof_cam, tof_net):
         for i in range(len(te_idx)):
             # if np.mod(i,10)==0:
             #     scenes = select_objects()
-            # x_te,y_te,x_tr,z_gt = data_augment_th(scenes, test_dir, tof_cam)
-            x_te,y_te,x_tr,z_gt = data_augment_real(tests[te_idx[i]], test_dir, tof_cam)
+            # x_te,y_te,x_tr,z_gt = data_augment_th(scenes, array_dir, tof_cam)
+            x_te,y_te,x_tr,z_gt = data_augment_real(tests[te_idx[i]], array_dir, tof_cam)
             x.append(x_te)
             y.append(y_te)
             x_true.append(x_tr)
@@ -922,24 +851,24 @@ def testing_real_motion(tests, test_dir, output_dir, tof_cam, tof_net):
     return
 
 if __name__ == '__main__':
-    array_dir = '../FLAT/trans_render/'
-    data_dir = '../FLAT/full/'
+    array_dir = '../FLAT/trans_render/static/'
+    data_dir = '../FLAT/kinect/'
 
     # initialize the camera model
     tof_cam = kinect_real_tf()
 
     # input the folder that trains the data
     # only use the files listed
-    f = open('../FLAT/kinect/list/motion-real-validation.txt','r')
+    f = open('../FLAT/kinect/list/motion_real.txt','r')
     message = f.read()
     files = message.split('\n')
     tests = files[0:-1]
-    tests = [data_dir+test[-23:-7] for test in tests]
+    tests = [data_dir+test for test in tests]
 
-    # initialize the camera model
-    import training
-    tof_cam = kinect_real_tf()
-    training.tof_cam = tof_cam
+    # # initialize the camera model
+    # import training
+    # tof_cam = kinect_real_tf()
+    # training.tof_cam = tof_cam
 
     # create the network estimator
     file_name = 'MOM'
@@ -949,11 +878,23 @@ if __name__ == '__main__':
         model_dir="./models/kinect/"+file_name,
     )
 
+    # create the network estimator
+    baseline_name = 'LF2'
+    from LF2 import tof_net_func
+    raw_depth_new = learn.Estimator(
+        model_fn=tof_net_func,
+        model_dir="./models/kinect/"+baseline_name,
+    )
+
+
     # create output folder
     output_dir = './results/kinect/'    
     folder_name = file_name    
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
     output_dir = output_dir + folder_name + '/'
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    testing_real_motion(tests, array_dir, output_dir, tof_cam, tof_net)
+    testing_syn_motion(tests, array_dir, output_dir, tof_cam, tof_net)
+    # testing_real_motion(tests, array_dir, output_dir, tof_cam, tof_net)

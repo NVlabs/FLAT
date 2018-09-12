@@ -1,5 +1,7 @@
 # this code simulates the time-of-flight data
 # all time unit are picoseconds (1 picosec = 1e-12 sec)
+import sys
+sys.path.insert(0,'../sim/')
 import numpy as np
 import os, json, glob
 import imageio
@@ -27,11 +29,10 @@ from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_f
 tf.logging.set_verbosity(tf.logging.INFO)
 
 from kinect_init import *
+from testing_MRM_LF2 import data_augment
 
 PI = 3.14159265358979323846
-raw_depth_new = 0
 flg = False
-
 dtype = tf.float32
 
 def leaky_relu(x):
@@ -39,105 +40,6 @@ def leaky_relu(x):
     x_pos = tf.nn.relu(x)
     x_neg = tf.nn.relu(-x)
     return x_pos - alpha * x_neg
-
-def data_augment(scene_n, test_dir, tof_cam):
-    print('Augmenting scene', scene_n)
-    ## load all data
-    # if the raw file does not exist, just find one and use
-    if not os.path.exists(test_dir+scene_n[-16:]+'.pickle'):
-        scenes = glob.glob(test_dir+'*.pickle')
-        with open(scenes[0],'rb') as f:
-            data = pickle.load(f)
-        cam = data['cam']
-
-        # separately read the true depth and true rendering
-        with open(test_dir[0:-1]+'-gt/'+scene_n[-16::],'rb') as f:
-            gt=np.fromfile(f, dtype=np.float32)
-        depth_true = np.reshape(gt,(cam['dimy']*4,cam['dimx']*4))
-
-        with open(test_dir[0:-1]+'-ideal/'+scene_n[-16::],'rb') as f:
-            meas_gt=np.fromfile(f, dtype=np.int32)
-        meas_gt = np.reshape(meas_gt,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
-    else:
-        with open(test_dir+scene_n[-16::]+'.pickle','rb') as f:
-            data = pickle.load(f)
-        program = data['program']
-        cam = data['cam']
-        cam_t = data['cam_t']
-        scene = data['scene']
-        depth_true = data['depth_true']
-        prop_idx = data['prop_idx']
-        prop_s = data['prop_s'] 
-        res_gt = tof_cam.process_gt_delay_vig_dist_surf_mapmax(cam, prop_idx, prop_s, scene, depth_true)
-        meas_gt = res_gt['meas']
-
-    # directly read pregenerate raw measurement
-    with open(scene_n,'rb') as f:
-        meas=np.fromfile(f, dtype=np.int32)
-    meas = np.reshape(meas,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
-    msk = kinect_mask().astype(np.float32)
-    meas = [meas[:,:,i]*msk/tof_cam.cam['map_max'] for i in range(meas.shape[-1])]
-    meas_gt = [meas_gt[:,:,i]*msk/tof_cam.cam['map_max'] for i in range(meas_gt.shape[-1])]
-    meas = np.stack(meas, -1)
-    meas_gt = np.stack(meas_gt, -1)
-
-    # reduce the resolution of the depth
-    depth_true_s = scipy.misc.imresize(\
-        depth_true,\
-        meas.shape[0:2],\
-        mode='F'\
-    )
-    depth_true_s = tof_cam.dist_to_depth(depth_true_s)
-
-    # load the mask and classification
-    with open(test_dir[0:-1]+'-msk'+'/'+scene_n[-16:],'rb') as f:
-        msk_array=np.fromfile(f, dtype=np.float32)
-    msk_array = np.reshape(msk_array,(cam['dimy'],cam['dimx'],4))
-    msk = {}
-    msk['background'] = msk_array[:,:,0]
-    msk['edge'] = msk_array[:,:,1]
-    msk['noise'] = msk_array[:,:,2]
-    msk['reflection'] = msk_array[:,:,3]
-
-    # compute mask
-    msk_true_s = msk['background'] * msk['edge']
-
-    # add textures (simply multiply a ratio)
-    texts = glob.glob('../FLAT/kinect/list/textures-curet/'+'*.png')
-    idx = np.random.choice(len(texts),1,replace=False)[0]
-    im_text = cv2.imread(texts[idx],0).astype(np.float32)
-    im_text /= 255.
-    lo = np.random.uniform(0,1) # random range
-    hi = np.random.uniform(lo,1)
-    im_text = im_text * (hi-lo) + lo
-    im_text = scipy.misc.imresize(im_text,meas.shape[0:2],mode='F')
-    im_text = np.expand_dims(im_text,-1)
-
-    # apply the texture
-    meas = meas * im_text
-    meas_gt = meas_gt * im_text
-
-    true = np.stack([depth_true_s, msk_true_s],-1)
-    true = np.concatenate([true, meas_gt], -1)
-
-    # cut the regions
-    meas = meas[20:-20,:,:]
-    true = true[20:-20,:,:]
-
-    # select a part of the image
-    py = int(meas.shape[0]/2)
-    px = int(meas.shape[1]/2)
-    meas_p = []
-    true_p = []
-    for iy in range(0,meas.shape[0]-py+1,int(py/2)):
-        for ix in range(0,meas.shape[1]-px+1,int(px/2)):
-            meas_p.append(meas[iy:(iy+py),ix:(ix+px)])
-            true_p.append(true[iy:(iy+py),ix:(ix+px)])
-    meas_p = np.stack(meas_p, 0)
-    true_p = np.stack(true_p, 0)
-
-    # the input of the network
-    return meas, true
 
 def kpn(x, flg):
     x_shape=[None, 424, 512, 9]
@@ -152,12 +54,7 @@ def kpn(x, flg):
     keys_avoid = ['OptimizeLoss']
     inits = []
 
-    from training_pipeline4_kinect import tof_net_func
-    net_name = 'tof_net_pipeline4_kinect'
-    init_net = learn.Estimator(
-        model_fn=tof_net_func,
-        model_dir="./models/kinect/"+net_name,
-    )
+    init_net = None
     if init_net != None:
         for name in init_net.get_variable_names():
             # select certain variables
@@ -975,7 +872,7 @@ def training(trains, train_dir, vals, val_dir, tof_cam, tof_net, tr_num=1, batch
     x_val = []
     y_val = []
     for i in range(len(vals)):
-        x_t, y_t = data_augment(vals[i], val_dir, tof_cam)
+        x_t, y_t = data_augment(vals[i], val_dir, tof_cam,text_flg = True)[0:2]
         x_val.append(x_t)
         y_val.append(y_t)
     x_val = np.stack(x_val,0)
@@ -988,7 +885,7 @@ def training(trains, train_dir, vals, val_dir, tof_cam, tof_net, tr_num=1, batch
         x = []
         y = []
         for i in indices:
-            x_t,y_t = data_augment(trains[i], train_dir, tof_cam)
+            x_t,y_t = data_augment(trains[i], train_dir, tof_cam, text_flg = True)[0:2]
             x.append(x_t)
             y.append(y_t)
         x = np.stack(x,0)
@@ -1019,26 +916,25 @@ def training(trains, train_dir, vals, val_dir, tof_cam, tof_net, tr_num=1, batch
 
 if __name__ == '__main__':
     # data
-    array_dir = '../FLAT/trans_render/'
-    data_dir = '../FLAT/kinect/full/'
+    array_dir = '../FLAT/trans_render/static/'
+    data_dir = '../FLAT/kinect/'
 
     # initialize the camera model
     tof_cam = kinect_real_tf()
 
     # input the folder that trains the data
     # only use the files listed
-    f = open('../FLAT/kinect/list/scenes-train.txt','r')
+    f = open('../FLAT/kinect/list/train.txt','r')
     message = f.read()
     files = message.split('\n')
     trains = files[0:-1]
-    trains = [data_dir+train[-23:-7] for train in trains]
+    trains = [data_dir+train for train in trains]
 
-
-    f = open('../FLAT/kinect/list/corners.txt','r')
+    f = open('../FLAT/kinect/list/test.txt','r')
     message = f.read()
     files = message.split('\n')
     vals = files[0:-1]
-    vals = [data_dir+val[-23:-7] for val in vals]
+    vals = [data_dir+val for val in vals]
     vals = vals[0:4] # limit the validation set
 
     # create the network estimator for depth
@@ -1051,5 +947,5 @@ if __name__ == '__main__':
     )
 
     training(trains, array_dir, vals, array_dir, tof_cam, tof_net,\
-             tr_num=50, batch_size=2, steps=200, iter_num=4000
+             tr_num=5, batch_size=1, steps=100, iter_num=4000
     )

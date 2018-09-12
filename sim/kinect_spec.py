@@ -94,7 +94,7 @@ def kinect_mask():
 
 def kinect_real_spec(cam):
 	# load the camera function
-	prms = np.loadtxt('params/kinect/cam_func_params.txt',delimiter=',')
+	prms = np.loadtxt('../params/kinect/cam_func_params.txt',delimiter=',')
 
 	# camera function
 	coef = 4*PI/3e-4
@@ -134,7 +134,7 @@ def kinect_real_tf_spec():
 	cam['fov_x'] = 70
 
 	# load the camera function
-	prms = np.loadtxt('params/kinect/cam_func_params.txt',delimiter=',')
+	prms = np.loadtxt('../params/kinect/cam_func_params.txt',delimiter=',')
 
 	# camera function
 	coef = 4*PI/3e-4
@@ -182,7 +182,7 @@ def nonlinear_adjust(cam, cor):
 	phase_pred = np.arctan2(tmp_Q, tmp_I)
 	depth_pred = np.stack([phase_pred[:,k]*T[k]/2/PI * C/2 for k in range(3)],-1)
 
-	# unwrapping manually            
+	# unwrapping manually			
 	T_cri = T[1]
 	depth_cri = depth_pred[:,1]
 	depth_unwrap = []

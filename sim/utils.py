@@ -104,16 +104,16 @@ def find_nonzero(prop):
 	ed = 0
 	ed_thre = 0.999
 	for i in range(light_amount.shape[0]):
-	    # judge whether the light has arrived at the scene
-	    if st_flag == 0 and light_amount[i] != 0:
-	    	st = i
-	    	st_flag = 1
-	    
-	    # judge whether the light has reached ed_thre of the total light
-	    acc_amount += light_amount[i]
-	    if acc_amount/total_amount > ed_thre:
-	        ed = i
-	        break
+		# judge whether the light has arrived at the scene
+		if st_flag == 0 and light_amount[i] != 0:
+			st = i
+			st_flag = 1
+		
+		# judge whether the light has reached ed_thre of the total light
+		acc_amount += light_amount[i]
+		if acc_amount/total_amount > ed_thre:
+			ed = i
+			break
 	ed += 1
 	return prop_data[:,:,st:ed],st,ed
 
