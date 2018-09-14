@@ -22,7 +22,7 @@ flat_flg = 'kinect'
 list_flgs = ['test']
 
 # create the local folder for the dataset
-folder = './FLAT_test/'
+folder = './FLAT/'
 if not os.path.exists(folder):
 	os.mkdir(folder)
 
