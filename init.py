@@ -10,6 +10,7 @@ def batch_download(keys, file_dir):
 		if not os.path.exists(folder):
 			os.mkdir(folder)
 		if not os.path.isfile(key):
+			pdb.set_trace()
 			gdd.download_file_from_google_drive(
 				file_id=file_dir[key]['file_id'],
 				dest_path=key,
@@ -58,7 +59,26 @@ for i in range(len(list_flgs)):
 	batch_download(keys, file_dir)
 
 
-# download the modules
+# download the parameters
+param_id = '1qXvprK-vmS4eJJA4GimjjuqNoNPuAvpw'
+os.chdir('../')
+folder = './params/'
+if not os.path.exists(folder):
+	os.mkdir(folder)
+gdd.download_file_from_google_drive(
+	file_id=param_id,
+	dest_path=folder+'params.zip',
+	unzip=True,
+)
 
-
-pdb.set_trace()
+# download the parameters
+param_id = '1gVFmJ4mXkcnjjNHfgQ_BKM4v7woMUYWa'
+os.chdir('./pipe/')
+folder = './models/'
+if not os.path.exists(folder):
+	os.mkdir(folder)
+gdd.download_file_from_google_drive(
+	file_id=param_id,
+	dest_path=folder+'kinect.zip',
+	unzip=True
+)
