@@ -71,38 +71,59 @@ def gen_raw(scene_n, data_dir, tof_cam):
 
 	return
 
-if __name__ == '__main__':
+def gen_dataset(setup):
 	"""
 	Create compact array from the dataset
 	"""
-	setup = 'deeptof'
-	goal_dir = '../FLAT/trans_render/static/'
+	data_dir = '../FLAT/trans_render/static/'
 	save_dir = '../FLAT/'+setup + '/'
+	sub_dir = 'full/'
 
-	if not os.path.exists(goal_dir):
-		os.mkdir(goal_dir)
+	if not os.path.exists(data_dir):
+		os.mkdir(data_dir)
 
 	if not os.path.exists(save_dir):
 		os.mkdir(save_dir)
+	if not os.path.exists(save_dir+sub_dir):
+		os.mkdir(save_dir)
 
-	tof_cam = deep_tof()
+	tof_cam = eval(setup+'()')
 
 	"""
-	Create four raw measurements from compact array
+	Create raw measurements from compact array
 	"""
 	# input the folder that contains the data
-	scenes = glob.glob(goal_dir+'*.pickle')
-
-	f = open(save_dir+'list/scenes-test.txt','r')
-	message = f.read()
-	files = message.split('\n')
-	files = files[0:-1]
-	files = [file[-23:-7] for file in files]
+	scenes = glob.glob(data_dir+'*.pickle')
 
 	# jump over those already finished 
-	scenes_finished = glob.glob(save_dir+'*')
+	scenes_finished = glob.glob(save_dir+sub_dir+'*')
 	scenes_finished = [scene[-16::] for scene in scenes_finished]
 
 	for i in range(len(scenes)):
-		if (scenes[i][-23:-7] in files) and (scenes[i][-23:-7] not in scenes_finished):
-			gen_raw(scenes[i], goal_dir, tof_cam)
+		if (scenes[i][-23:-7] in scenes) and (scenes[i][-23:-7] not in scenes_finished):
+			gen_raw(scenes[i], data_dir, tof_cam)
+
+
+	"""
+	Generate images for new scenes
+	"""
+	scenes = glob.glob(save_dir+sub_dir+'*')
+
+	# file that saves the name
+	if not os.path.exists(save_dir+'list/'):
+		os.mkdir(save_dir+'list/')
+	savefile = open(save_dir + 'list/all.txt','w')
+
+	scenes_all = [\
+		scene[-16::]
+		for scene in scenes
+	]
+	for scene in scenes_all:
+		savefile.write(scene+'\n')
+			
+	savefile.close()
+
+	return 
+
+if __name__ == '__main__':
+	gen_dataset('deeptof')

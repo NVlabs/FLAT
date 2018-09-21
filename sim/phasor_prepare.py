@@ -17,6 +17,7 @@ from copy import deepcopy
 from joblib import Parallel, delayed
 import multiprocessing
 import scipy.sparse as sp
+from deeptof_prepare import gen_dataset
 
 from tensorflow.contrib import learn
 from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
@@ -73,37 +74,4 @@ def gen_raw(scene_n, data_dir, tof_cam):
 	return
 
 if __name__ == '__main__':
-	"""
-	Create compact array from the dataset
-	"""
-	setup = 'phasor'
-	goal_dir = '../FLAT/trans_render/static/'
-	save_dir = '../FLAT/'+setup + '/'
-
-	if not os.path.exists(goal_dir):
-		os.mkdir(goal_dir)
-
-	if not os.path.exists(save_dir):
-		os.mkdir(save_dir)
-
-	tof_cam = phasor()
-
-	"""
-	Create four raw measurements from compact array
-	"""
-	# input the folder that contains the data
-	scenes = glob.glob(goal_dir+'*.pickle')
-
-	f = open(save_dir+'list/scenes-test.txt','r')
-	message = f.read()
-	files = message.split('\n')
-	files = files[0:-1]
-	files = [file[-23:-7] for file in files]
-
-	# jump over those already finished 
-	scenes_finished = glob.glob(save_dir+'*')
-	scenes_finished = [scene[-16::] for scene in scenes_finished]
-
-	for i in range(len(scenes)):
-		if (scenes[i][-23:-7] in files) and (scenes[i][-23:-7] not in scenes_finished):
-			gen_raw(scenes[i], save_dir, tof_cam)
+	gen_dataset('phasor')
