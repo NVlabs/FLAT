@@ -1345,7 +1345,7 @@ if __name__ == '__main__':
 
     # input the folder that trains the data
     # only use the files listed
-    f = open('../FLAT/kinect/list/val.txt','r')
+    f = open('../FLAT/kinect/list/test_dyn.txt','r')
     message = f.read()
     files = message.split('\n')
     tests = files[0:-1]

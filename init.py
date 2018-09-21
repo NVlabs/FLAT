@@ -30,7 +30,7 @@ def main():
 		'-n','--name', 
 		metavar='dataset_name',
 		type=str, 
-		default = 'test',
+		default = ['test'],
 		nargs = '+',
 		help='list the part of FLAT dataset to download'
 	)
@@ -62,7 +62,7 @@ def main():
 		list_flgs = []
 		for i in range(len(args.name)):
 			list_flgs += [key for key in file_dir.keys() \
-			if (flat_flg in key)*('/'+args.name[i]+'.txt' in key)]
+			if (flat_flg in key)*('.txt' in key)*(args.name[i] in key)]
 
 	# inidicate the hardware or trans_render one wants to download
 	flat_flg = 'kinect'
@@ -71,8 +71,7 @@ def main():
 	lists = []
 	# download the certain list indicated by the flg
 	for i in range(len(list_flgs)):
-		folder_dir = './'+flat_flg+'/list/'
-		filename = folder_dir+list_flgs[i]+'.txt'
+		filename = list_flgs[i]
 		if filename in file_dir.keys():
 			batch_download([filename],file_dir)
 
