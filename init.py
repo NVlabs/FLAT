@@ -10,10 +10,11 @@ def batch_download(keys, file_dir):
 	# download the dataset
 	for key in keys:
 		folder = '/'.join(key.split('/')[0:-1])+'/'
-		if not os.path.exists(folder):
-			os.mkdir(folder)
+		for i in range(1,len(key.split('/'))-1):
+			folder = '/'.join(key.split('/')[0:i])+'/'
+			if not os.path.exists(folder):
+				os.mkdir(folder)
 		if not os.path.isfile(key):
-			pdb.set_trace()
 			gdd.download_file_from_google_drive(
 				file_id=file_dir[key]['file_id'],
 				dest_path=key,
@@ -98,6 +99,20 @@ def main():
 					and (key.split('/')[1] == flat_flg)
 				]
 				batch_download(keys, file_dir)
+
+	# download a trans_render model for data augmentation
+	param_id = '1CEghNRT-Y_uNzFTkIUXQHaB61kXN0Kt6'
+	key = './trans_render/static/'
+	for i in range(1,len(key.split('/'))):
+		folder = '/'.join(key.split('/')[0:i])+'/'
+		if not os.path.exists(folder):
+			os.mkdir(folder)
+	if not os.path.isfile(folder+'1499455750460059.pickle'):
+		gdd.download_file_from_google_drive(
+			file_id=param_id,
+			dest_path=folder+'1499455750460059.pickle',
+			unzip=True,
+		)
 
 
 	# download the parameters

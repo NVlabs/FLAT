@@ -508,7 +508,6 @@ def tof_net_func(x, y, mode):
 
     # convert to the default data type
     x = tf.cast(x, dtype)
-    y = tf.cast(y, dtype)
 
     ms = processPixelStage1(x)
     mfs, bilateral_max_edge_tests = filterPixelStage1(ms)
@@ -533,16 +532,17 @@ def tof_net_func(x, y, mode):
     loss = None
     train_op = None
 
-    # compute loss (for TRAIN and EVAL modes)
-    # fake a variable
-    depth_true = y[:,:,:,0]
-    msk = y[:,:,:,1]
-
-    # mask out the regions that are predicted as zero
-    msk_new = tf.cast(tf.greater(depth_final,1e-4), dtype=dtype)
-    msk *= msk_new
-
     if mode != learn.ModeKeys.INFER:
+        # compute loss (for TRAIN and EVAL modes)
+        # fake a variable
+        y = tf.cast(y, dtype)
+        depth_true = y[:,:,:,0]
+        msk = y[:,:,:,1]
+
+        # mask out the regions that are predicted as zero
+        msk_new = tf.cast(tf.greater(depth_final,1e-4), dtype=dtype)
+        msk *= msk_new
+
         loss = (tf.reduce_sum(tf.abs(\
             depth_final-depth_true\
         )**l * msk)/tf.reduce_sum(msk))**(1/l)
@@ -572,97 +572,4 @@ def tof_net_func(x, y, mode):
         predictions=predictions,
         loss=loss,
         train_op=train_op,
-    )
-
-def training(trains, train_dir, vals, val_dir, tof_cam, tof_net, tr_num=1, batch_size=1, steps=500, iter_num=2000):
-    # first prepare validation data
-    x_val = []
-    y_val = []
-    for i in range(len(vals)):
-        x_t, y_t = data_augment(vals[i], val_dir, tof_cam)
-        x_val.append(x_t)
-        y_val.append(y_t)
-    x_val = np.stack(x_val,0)
-    y_val = np.stack(y_val,0)
-
-
-    # data augmentation
-    for i in range(iter_num):
-        indices = np.random.choice(len(trains),tr_num,replace=False)
-        x = []
-        y = []
-        for i in indices:
-            x_t,y_t = data_augment(trains[i], train_dir, tof_cam)
-            x.append(x_t)
-            y.append(y_t)
-        x = np.stack(x,0)
-        y = np.stack(y,0)
-
-        # set up logging for predictions
-        tensors_to_log = {"Training loss": "loss"}
-        logging_hook = tf.train.LoggingTensorHook(
-            tensors=tensors_to_log, every_n_iter=1
-        )
-        validation_monitor = tf.contrib.learn.monitors.ValidationMonitor(
-            x=x_val[0:1,:,:,:],
-            y=y_val[0:1,:,:,:],
-            every_n_steps=100,
-            name='Validation',
-        )
-
-        # training
-        tof_net.fit(\
-            x=x,
-            y=y,
-            batch_size=batch_size,
-            steps=steps,
-            monitors=[logging_hook, validation_monitor]
-        )
-
-        evals = tof_net.evaluate(x=x,y=y)
-        data = list(tof_net.predict(x=x))
-
-        pdb.set_trace()
-
-    return tof_net, msk_net
-
-if __name__ == '__main__':
-    # data
-    data_dir = '../FLAT/kinect/'
-    array_dir = '../FLAT/trans_render/static/'
-
-    # initialize the camera model
-    tof_cam = kinect_real_tf()
-
-    # input the folder that trains the data
-    # only use the files listed
-    f = open('../FLAT/kinect/list/train.txt','r')
-    message = f.read()
-    files = message.split('\n')
-    trains = files[0:-1]
-    trains = [data_dir+train for train in trains]
-
-    # input the folder that validates the data
-    f = open('../FLAT/kinect/list/test.txt','r')
-    message = f.read()
-    files = message.split('\n')
-    vals = files[0:-1]
-    vals = [data_dir+val for val in vals]
-    vals = vals[0:10] # limit the validation set
-    
-    # # control the training set
-    # trains = ['../FLAT/trans_render/1499398781627230.pickle',\
-    # '../FLAT/trans_render/1499414025942557.pickle',\
-    # ]
-    vals = vals[0:1]
-
-    # create the network estimator for depth
-    net_name = 'tof_net_open_kinect_batch'
-    tof_net = learn.Estimator(
-        model_fn=tof_net_func,
-        model_dir="./models/kinect/"+net_name,
-    )
-
-    training(trains, train_dir, vals, val_dir, tof_cam, tof_net,\
-             tr_num=1, batch_size=1, steps=200, iter_num=400
     )

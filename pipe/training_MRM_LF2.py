@@ -762,7 +762,6 @@ def tof_net_func(x, y, mode):
 
     # convert to the default data type
     x = tf.cast(x, dtype)
-    y = tf.cast(y, dtype)
 
     # denoising and de-multiple-reflection
     reflection_train_flg = True
@@ -819,6 +818,7 @@ def tof_net_func(x, y, mode):
     # fake a variable
 
     if mode != learn.ModeKeys.INFER:
+        y = tf.cast(y, dtype)
         depth_true = y[:,:,:,0]
         x_warped_r_gt = y[:,:,:,2:11]
         gt_mask = tf.cast(tf.greater(depth_true, 1e-4), dtype=dtype)*y[:,:,:,1]

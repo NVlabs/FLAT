@@ -29,11 +29,303 @@ from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_f
 tf.logging.set_verbosity(tf.logging.INFO)
 
 from kinect_init import *
-from testing_MOM import select_objects, data_augment_th
 
 PI = 3.14159265358979323846
 
 dtype = tf.float32
+
+def select_objects():
+    check = False
+    data_dir = '../FLAT/kinect/'
+    array_dir = '../FLAT/trans_render/static/'
+
+    # background is selected from far corners
+    f = open('../FLAT/kinect/list/motion_background.txt','r')
+    message = f.read()
+    files = message.split('\n')
+    trains = files[0:-1]
+    back_scenes = [data_dir+train for train in trains]
+
+    # foreground is selected from objects
+    f = open('../FLAT/kinect/list/motion_foreground.txt','r')
+    message = f.read()
+    files = message.split('\n')
+    trains = files[0:-1]
+    fore_scenes = [data_dir+train for train in trains]
+
+    
+    while(check==False):
+        back_idx = np.random.choice(len(back_scenes),1,replace=False)
+        fore_num = np.random.choice(1,1,replace=False)[0]+1
+        fore_idx = np.random.choice(len(fore_scenes),fore_num,replace=False)
+
+        # put the scenes together
+        scenes = [back_scenes[idx] for idx in back_idx]+[fore_scenes[idx] for idx in fore_idx]
+
+        # check the distance between them are larger than 0.1m
+        depths = []
+        msks = []
+        for scene in scenes:
+            with open(scene[0:-16]+'gt/'+scene[-16::],'rb') as f:
+                gt=np.fromfile(f, dtype=np.float32)
+            depths.append(np.reshape(gt,(424*4,512*4)))
+            msks.append((depths[-1]==0)*99999)
+
+        diff = [depths[i]-depths[j]+msks[i]+msks[j] for i in range(len(msks)) for j in range(i+1,len(msks))]
+        diff = np.stack(diff,0)
+        if diff.min()>0.1 and diff[0:fore_num].min()>0:check = True
+    
+    # # show the scene
+    # depths = np.stack(depths,0)
+    # depths[np.where(depths==0)] = 999999
+    # idx = np.argmin(depths,0)
+    # y = np.arange(depths[0].shape[0])
+    # x = np.arange(depths[0].shape[1])
+    # xx, yy = np.meshgrid(x,y)
+    # pts = [idx.flatten(), yy.flatten(), xx.flatten()]
+    # depth = np.reshape(depths[pts], xx.shape)
+    # depth[np.where(depth>10)] = 0
+    # plt.figure();plt.imshow(depth);plt.show()
+
+    return scenes
+
+def data_augment_th(scene_ns, array_dir, tof_cam, text_flg = False): # first loading each scene, and we will combine them then
+    meass = []
+    depths = []
+    msks = []
+    vs = []
+    for scene_n in scene_ns:
+        print('Augmenting scene', scene_n)
+        ## load all data
+        # if the raw file does not exist, just find one and use
+        if not os.path.exists(array_dir+scene_n[-16:]+'.pickle'):
+            scenes = glob.glob(array_dir+'*.pickle')
+            with open(scenes[0],'rb') as f:
+                data = pickle.load(f)
+            cam = data['cam']
+
+            # separately read the true depth and true rendering
+            with open(scene_n[0:-16]+'gt/'+scene_n[-16::],'rb') as f:
+                gt=np.fromfile(f, dtype=np.float32)
+            depth_true = np.reshape(gt,(cam['dimy']*4,cam['dimx']*4))
+
+            with open(scene_n[0:-16]+'ideal/'+scene_n[-16::],'rb') as f:
+                meas_gt=np.fromfile(f, dtype=np.int32)
+            meas_gt = np.reshape(meas_gt,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
+        else:
+            with open(array_dir+scene_n[-16::]+'.pickle','rb') as f:
+                data = pickle.load(f)
+            program = data['program']
+            cam = data['cam']
+            cam_t = data['cam_t']
+            scene = data['scene']
+            depth_true = data['depth_true']
+            prop_idx = data['prop_idx']
+            prop_s = data['prop_s'] 
+            res_gt = tof_cam.process_gt_delay_vig_dist_surf_mapmax(cam, prop_idx, prop_s, scene, depth_true)
+            meas_gt = res_gt['meas']
+
+        # directly read pregenerate raw measurement
+        with open(scene_n[0:-16]+'full/'+scene_n[-16::],'rb') as f:
+            meas=np.fromfile(f, dtype=np.int32)
+        meas = np.reshape(meas,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
+        msk = kinect_mask().astype(np.float32)
+        meas = [meas[:,:,i]*msk for i in range(meas.shape[2])]
+        meas = np.stack(meas,-1)
+        meas = meas / tof_cam.cam['map_max']
+        # meas = meas[::-1,:,:]
+
+        # reduce the resolution of the depth
+        depth_true_s = scipy.misc.imresize(\
+            depth_true,\
+            meas.shape[0:2],\
+            mode='F'\
+        )
+        depth_true_s = tof_cam.dist_to_depth(depth_true_s)
+
+        # load the mask and classification
+        with open(scene_n[0:-16]+'msk'+'/'+scene_n[-16:],'rb') as f:
+            msk_array=np.fromfile(f, dtype=np.float32)
+        msk_array = np.reshape(msk_array,(cam['dimy'],cam['dimx'],4))
+        msk = {}
+        msk['background'] = msk_array[:,:,0]
+        msk['edge'] = msk_array[:,:,1]
+        msk['noise'] = msk_array[:,:,2]
+        msk['reflection'] = msk_array[:,:,3]
+
+        # compute mask
+        msk_true_s = msk['background'] * msk['edge']
+
+        true = np.stack([depth_true_s,msk_true_s],2)
+        true = np.concatenate([true, meas_gt], 2)
+
+        # cut out some parts to make it dividable
+        meas = meas[20:-20,:,:]
+        depth_true_s = depth_true_s[20:-20,:]
+        msk = msk_true_s[20:-20,:]
+
+        if text_flg == True:
+            # add textures (simply multiply a ratio)
+            texts = glob.glob('../params/kinect/textures-curet/'+'*.png')
+            idx = np.random.choice(len(texts),1,replace=False)[0]
+            im_text = cv2.imread(texts[idx],0).astype(np.float32)
+            im_text /= 255.
+            lo = np.random.uniform(0,1) # random range
+            hi = np.random.uniform(lo,1)
+            im_text = im_text * (hi-lo) + lo
+            im_text = scipy.misc.imresize(im_text,meas.shape[0:2],mode='F')
+            im_text = np.expand_dims(im_text,-1)
+
+            # apply the texture
+            meas = meas * im_text
+
+        # randomly generating an in image velocity
+        v = np.random.rand(2)
+        detv = np.random.uniform()*5 # the biggest velocity is 2 pixels per channel
+        v = v / np.sqrt(np.sum(v**2)) * detv
+
+        # randomly generating the 6 affine transform parameters
+        max_pix = 10
+        mov = 10
+        while (np.abs(mov).max() >= max_pix):
+            th1 = np.random.normal(0.0,0.02,[2,2])
+            th1[0,0]+=1
+            th1[1,1]+=1
+            th2 = np.random.normal(0.0,1.0,[2,1])
+            th3 = np.array([[0,0,1]])
+            th = np.concatenate([th1,th2],1)
+            th = np.concatenate([th,th3],0)
+            x = np.arange(meas.shape[1])
+            y = np.arange(meas.shape[0])
+            xx, yy = np.meshgrid(x,y)
+            mov = np.sqrt(\
+                ((1-th[0,0])*yy-th[0,1]*xx-th[0,2])**2 + \
+                ((1-th[1,1])*xx-th[1,0]*yy-th[1,2])**2
+            )*msk
+
+        # append the data
+        meass.append(meas)
+        depths.append(depth_true_s)
+        msks.append(msk)
+        vs.append(th)
+
+    # move the object and combine them by channel
+    y = np.arange(meass[0].shape[0])
+    x = np.arange(meass[0].shape[1])
+    xx, yy = np.meshgrid(x,y)
+    meass_new = []
+    meass_old = []
+    vys_new = []
+    vxs_new = []
+    msks_new = []
+    depths_new = []
+
+    mid = 4
+    for i in range(9):
+        meas_v = []
+        depth_v = []
+        msk_v = []
+        vy_v = []
+        vx_v = []
+        meas_old_v = []
+        for j in range(len(meass)):
+            # constant transformation
+            th = vs[j]
+            th = LA.matrix_power(th, i-mid)
+            pts_y = th[0,0]*yy+th[0,1]*xx+th[0,2]
+            pts_x = th[1,0]*yy+th[1,1]*xx+th[1,2]
+            pts = np.stack([pts_y.flatten(), pts_x.flatten()],-1)
+
+            f1 = scipy.interpolate.RegularGridInterpolator((y,x),meass[j][:,:,i],bounds_error=False, fill_value=0)
+            meas_v.append(np.reshape(f1(pts), xx.shape))
+            meas_old_v.append(meass[j][:,:,i])
+
+            f2 = scipy.interpolate.RegularGridInterpolator((y,x),depths[j],bounds_error=False, fill_value=0)
+            depth_v.append(np.reshape(f2(pts), xx.shape))
+
+            f3 = scipy.interpolate.RegularGridInterpolator((y,x),msks[j],bounds_error=False, fill_value=0)
+            msk_v.append(np.reshape(f3(pts), xx.shape))
+
+            vy_v.append(pts_y - yy)
+            vx_v.append(pts_x - xx)
+
+            # mask out those regions that interpolates with the background
+            msk_v[-1][np.where(msk_v[-1]<0.999)] = 0
+
+            # meas_v[-1] *= msk_v[-1]
+            # depth_v[-1] *= msk_v[-1]
+            # vy_v[-1] *= msk_v[-1]
+            # vx_v[-1] *= msk_v[-1]
+
+        # combine the raw measurement based on depth
+        msk_v = np.stack(msk_v, -1)
+        meas_v = np.stack(meas_v, -1)
+        meas_old_v = np.stack(meas_old_v, -1)
+        depth_v = np.stack(depth_v, -1)
+        vy_v  = np.stack(vy_v, -1)
+        vx_v  = np.stack(vx_v, -1)
+
+        # combine 
+        depth_v[np.where(depth_v == 0)] = 999999999
+        idx = np.argmin(depth_v, -1)
+        pts = [yy.flatten(), xx.flatten(), idx.flatten()]
+        meas_new = np.reshape(meas_v[pts], xx.shape)
+        vy_new = np.reshape(vy_v[pts], xx.shape)
+        vx_new = np.reshape(vx_v[pts], xx.shape)
+        msk_new = np.reshape(msk_v[pts], xx.shape)
+        meas_old = np.reshape(meas_old_v[pts], xx.shape)
+        depth_new = np.reshape(depth_v[pts], xx.shape)
+        depth_new[np.where(depth_new > 10)] = 0
+
+        meass_new.append(meas_new)
+        vys_new.append(vy_new)
+        vxs_new.append(vx_new)
+        msks_new.append(msk_new)
+        depths_new.append(depth_new)
+
+        # warp back the raw measurements to mask out invisible parts
+        pts_y = (yy + vy_new).flatten()
+        pts_x = (xx + vx_new).flatten()
+        pts_y_fl = np.floor(pts_y).astype(np.int32)
+        pts_y_cl = np.ceil(pts_y).astype(np.int32)
+        pts_x_fl = np.floor(pts_x).astype(np.int32)
+        pts_x_cl = np.ceil(pts_x).astype(np.int32)
+        flg1 = pts_y_fl > 0
+        flg2 = pts_y_cl < yy.shape[0]
+        flg3 = pts_x_fl > 0
+        flg4 = pts_x_cl < yy.shape[1]
+        idx = np.where(flg1 * flg2 * flg3 * flg4)
+        pts_y_fl = pts_y_fl[idx]
+        pts_y_cl = pts_y_cl[idx]
+        pts_x_fl = pts_x_fl[idx]
+        pts_x_cl = pts_x_cl[idx]
+        pts = (\
+            np.concatenate([pts_y_fl, pts_y_fl, pts_y_cl, pts_y_cl],0),
+            np.concatenate([pts_x_fl, pts_x_cl, pts_x_fl, pts_x_cl],0)
+        )
+
+        # old measurement
+        msk_back = np.zeros(xx.shape)
+        msk_back[pts] = 1
+        meas_old = msk_back * meas_old
+        meass_old.append(meas_old)
+
+    # stack the final data
+    meas = []
+    true = []
+
+    # # visualize the velocity
+    # fig = plt.figure()
+    # for i in range(9):ax = fig.add_subplot(3,3,i+1);plt.imshow(meass_new[i])
+    # plt.show()
+    
+    meas = np.stack(meass_new+msks_new, -1)
+    true = np.stack(vys_new+vxs_new, -1)
+    meass_old = np.stack(meass_old, -1)
+    depths_new = np.stack(depths_new, -1)
+
+    # the input of the networka
+    return meas, true, meass_old, depths_new
 
 def leaky_relu(x):
     alpha = 0.1
@@ -248,7 +540,6 @@ def tof_net_func(x, y, mode):
     msks = tf.tile(x[:,:,:,9::],[1,1,1,2])
     msks = tf.cast(msks, dtype)
     x = tf.cast(x[:,:,:,0:9], dtype)
-    y = tf.cast(y, dtype)
     v = dnnOpticalFlow(x)
     # v = v * msks
 
@@ -258,6 +549,7 @@ def tof_net_func(x, y, mode):
 
     # compute loss (for TRAIN and EVAL modes)
     if mode != learn.ModeKeys.INFER:
+        y = tf.cast(y, dtype)
         v_true = y
         loss = (tf.reduce_mean(\
             tf.abs(\

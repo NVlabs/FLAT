@@ -2273,7 +2273,6 @@ def tof_net_func(x, y, mode):
 
     # convert to the default data type
     x = tf.cast(x, dtype)
-    y = tf.cast(y, dtype)
 
     # align the images
     motion_train_flg = False
@@ -2334,6 +2333,7 @@ def tof_net_func(x, y, mode):
     # fake a variable
 
     if mode != learn.ModeKeys.INFER:
+        y = tf.cast(y, dtype)
         depth_true = y[:,:,:,0]
         x_warped_v_gt = y[:,:,:,1:10]
         v_gt = y[:,:,:,10:28]

@@ -55,24 +55,17 @@ def testing(tests, test_dir, output_dir, tof_cam, tof_net):
         x = []
         y = []
         z_gts = []
-        x_gts = []
-        vys = []
-        vxs = []
+        msk_gts = []
         for i in range(len(te_idx)):
-            x_te,y_te,z_gt,vy,vx = data_augment(scenes[te_idx[i]], test_dir, tof_cam)
+            x_te,y_te,z_gt,msk_gt = data_augment(tests[te_idx[i]], array_dir, tof_cam)
             x.append(x_te)
             y.append(y_te)
             z_gts.append(z_gt)
-            x_gts.append(y_te[:,:,-10:-1])
-            vys.append(vy)
-            vxs.append(vx)
-
+            msk_gts.append(msk_gt)
         x = np.stack(x,0)
         y = np.stack(y,0)
-        z_gts = np.stack(z_gts,0)
-        x_gts = np.stack(x_gts,0)
-        vys = np.stack(vys,0)
-        vxs = np.stack(vxs,0)
+        z_gts = np.stack(z_gts, 0)
+        msk_gts = np.stack(msk_gts, 0)
 
         # chooose from the data
         num = 1
@@ -80,10 +73,6 @@ def testing(tests, test_dir, output_dir, tof_cam, tof_net):
         x = x[idx]
         y = y[idx]
         z_gts = z_gts[idx]
-        x_gts = x_gts[idx]
-
-        # evaluate the model and print results       
-        eval_results = tof_net.evaluate(x=x,y=y)
 
         # predict data
         data = list(tof_net.predict(x=x))
@@ -109,32 +98,11 @@ def testing(tests, test_dir, output_dir, tof_cam, tof_net):
             depth = data[j]['depth']
             depth_msk = data[j]['depth_msk:0']
             msk_out1 = data[j]['msk_out1:0']
-            msk_out2 = data[j]['msk_out2:0']
-
-            # vmin = prms['min_depth']/1000
-            # vmax = prms['max_depth']/1000
-            # msk = (z_gts[j,:,:,mid] > 1e-4)*depth_msk
-            # fig = plt.figure()
-            # ax= fig.add_subplot(1,2,1)
-            # plt.imshow(depth,vmin=vmin,vmax=vmax)
-            # ax= fig.add_subplot(1,2,2)
-            # plt.imshow(z_gts[j,:,:,mid],vmin=vmin,vmax=vmax)
-            # plt.show()
-            # err = np.sum(np.abs(depth-z_gts[j,:,:,mid])*msk)/np.sum(msk)
-            # pdb.set_trace()
-
-            # fig = plt.figure()
-            # for i in range(9):ax=fig.add_subplot(3,3,i+1);plt.imshow(y[j,:,:,i+28])
-            # fig = plt.figure()
-            # for i in range(9):ax=fig.add_subplot(3,3,i+1);plt.imshow(y[j,:,:,i+1])
-            # plt.show()
-            
+            msk_out2 = data[j]['msk_out2:0']            
 
             im_warped_v1 = []
-            im_warped_vgt = []
             for k in range(9):
                 v = vs[:,:,k::9]
-                v_gt = np.stack([vys[j,:,:,k], vxs[j,:,:,k]],-1)
                 im = x[j,:,:,k]
 
                 # warp the image
@@ -145,19 +113,12 @@ def testing(tests, test_dir, output_dir, tof_cam, tof_net):
                 yy = yy.flatten()
                 v_x = v[:,:,1].flatten()
                 v_y = v[:,:,0].flatten()
-                v_gtx = v_gt[:,:,1].flatten()
-                v_gty = v_gt[:,:,0].flatten()
                 xx_new = xx + v_x
                 yy_new = yy + v_y
-                xx_gt = xx + v_gtx
-                yy_gt = yy + v_gty
-                pts = np.stack([yy_new,xx_new],-1)
-                pts_gt = np.stack([yy_gt, xx_gt], -1)              
+                pts = np.stack([yy_new,xx_new],-1)         
                 f1 = scipy.interpolate.RegularGridInterpolator((y1,x1),im,bounds_error=False, fill_value=0)
                 im_warped_v1.append(np.reshape(f1(pts),im.shape))
-                im_warped_vgt.append(np.reshape(f1(pts_gt), im.shape))
             im_warped_v1 = np.stack(im_warped_v1,-1)
-            im_warped_vgt = np.stack(im_warped_vgt,-1)
 
             fig = plt.figure()
             plt.suptitle('Original Raw')
@@ -201,55 +162,10 @@ def testing(tests, test_dir, output_dir, tof_cam, tof_net):
                 dpi = 2*512,
             )
 
-            # fig = plt.figure()
-            # for i in range(9):ax=fig.add_subplot(3,3,i+1);plt.imshow(im_warped_vgt[:,:,i])
-            
-            fig = plt.figure()
-            plt.suptitle('Ground truth Raw')
-            for i in range(9):
-                ax=fig.add_subplot(3,3,i+1);
-                plt.imshow(x_gts[j,:,:,i]);
-                plt.axis('off')
-
-            name = int(np.random.uniform()*1e10)
-            plt.savefig(\
-                output_dir+str(name)+'.png',
-                bbox_inches='tight',
-                dpi = 2*512,
-            )
-
-            v_gt_vis = []
-            v_vis = []
-            max_v = 40
-            for i in range(9):
-                v_gt_vis.append(viz_flow(vys[j,:,:,i],vxs[j,:,:,i],scaledown=max_v))
-            for i in range(9):
-                v_vis.append(viz_flow(vs[:,:,i],vs[:,:,i+9],scaledown=max_v))
-            fig = plt.figure()
-            plt.suptitle('Optical Flow')
-            for i in range(9):
-                ax=fig.add_subplot(3,6,2*i+1);
-                plt.title('Predicted')
-                plt.imshow(v_vis[i]);
-                plt.axis('off')
-                ax=fig.add_subplot(3,6,2*i+2);
-                plt.title('Predicted')
-                plt.imshow(v_gt_vis[i])
-                plt.axis('off')
-
-            name = int(np.random.uniform()*1e10)
-            plt.savefig(\
-                output_dir+str(name)+'.png',
-                bbox_inches='tight',
-                dpi = 2*512,
-            )
-
-
             # use the kinect pipeline to produce depth
-            xs = [x[j,:,:,:], im_warped_r, im_warped_v, x_gts[j,:,:,:]]
+            xs = [x[j,:,:,:], im_warped_r, im_warped_v]
             msk = kinect_mask().astype(np.float32)
             msk_or = np.ones([384,512,1])
-            flg = False
             depths = []
             for x_or in xs:
                 y_or = np.concatenate([msk_or,msk_or,x_or],-1)
@@ -259,10 +175,6 @@ def testing(tests, test_dir, output_dir, tof_cam, tof_net):
                 x_or = np.stack(x_or,-1)
                 x_or = np.expand_dims(x_or,0)
                 y_or = np.expand_dims(y_or,0)
-
-                if flg == False:
-                    raw_depth_new.evaluate(x=x_or,y=y_or)
-                    flg = True
                 depths.append(list(raw_depth_new.predict(x=x_or))[0]['depth'])
             depths.append(
                 np.concatenate([np.zeros([20,512]),y[j,:,:,0],np.zeros([20,512])],0)
@@ -271,8 +183,7 @@ def testing(tests, test_dir, output_dir, tof_cam, tof_net):
             depth_or = depths[0][20:-20,:]
             depth = depths[1][20:-20,:,]
             depth_v = depths[2][20:-20,:]
-            depth_gt = depths[3][20:-20,:]
-            z_gt = depths[4][20:-20,:]
+            z_gt = depths[3][20:-20,:]
 
             vmin = z_gt[np.where(z_gt>1e-4)].min()
             vmax = z_gt.max()
@@ -311,15 +222,15 @@ def testing(tests, test_dir, output_dir, tof_cam, tof_net):
             plt.axis('off')           
 
             ax = fig.add_subplot(2,4,7)
-            plt.imshow(depth_gt,vmin=vmin,vmax=vmax)
-            msk = depth_gt > 0.5
-            err = np.sum(np.abs(depth_gt - z_gt)*msk)/np.sum(msk)
+            plt.imshow(z_gt,vmin=vmin,vmax=vmax)
+            msk = z_gt > 0.5
+            err = np.sum(np.abs(z_gt - z_gt)*msk)/np.sum(msk)
             plt.title('True, err: '+'%.4f'%err+'m')
             plt.colorbar()
             plt.axis('off')
 
             ax = fig.add_subplot(2,4,8)
-            plt.imshow((depth_gt - z_gt)*msk, vmin=-0.1,vmax=0.1)
+            plt.imshow((z_gt - z_gt)*msk, vmin=-0.1,vmax=0.1)
             plt.colorbar()         
             plt.axis('off')
 
@@ -364,10 +275,16 @@ if __name__ == '__main__':
     )
 
     # create output folder
-    output_dir = './results/kinect/'    
+    output_dir = './results/'
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    output_dir += 'kinect/'
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
     folder_name = file_name 
     output_dir = output_dir + folder_name + '/'
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
+
 
     testing(tests, array_dir, output_dir, tof_cam, tof_net)

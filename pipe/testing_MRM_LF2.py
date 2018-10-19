@@ -159,15 +159,6 @@ def testing(tests, array_dir, output_dir, tof_cam, tof_net):
         z_gts = np.stack(z_gts, 0)
         msk_gts = np.stack(msk_gts, 0)
 
-        # # chooose from the data
-        # num = 1
-        # idx = np.random.choice(x.shape[0],num,replace=False)
-        # x = x[idx]
-        # y = y[idx]
-
-        # evaluate the model and print results
-        eval_results = tof_net.evaluate(x=x,y=y)
-
         # predict data
         data = list(tof_net.predict(x=x))
         mid = 4
@@ -212,7 +203,7 @@ def testing(tests, array_dir, output_dir, tof_cam, tof_net):
             plt.suptitle('Ground truth Raw')
             for i in range(9):
                 ax=fig.add_subplot(3,3,i+1);
-                plt.imshow(y[j,:,:,i+2]*msk_sign);
+                plt.imshow(y[j,:,:,i+2]);
                 plt.axis('off')
             name = int(np.random.uniform()*1e10)
             plt.savefig(\
@@ -225,7 +216,6 @@ def testing(tests, array_dir, output_dir, tof_cam, tof_net):
             xs = [x[j,:,:,:]]
             msk_sign = kinect_mask().astype(np.float32)
             msk_or = np.ones([384,512,1])
-            flg = False
             depths = []
             for x_or in xs:
                 y_or = np.concatenate([msk_or,msk_or,x_or],-1)
@@ -235,10 +225,6 @@ def testing(tests, array_dir, output_dir, tof_cam, tof_net):
                 x_or = np.stack(x_or,-1)
                 x_or = np.expand_dims(x_or,0)
                 y_or = np.expand_dims(y_or,0)
-
-                if flg == False:
-                    raw_depth_new.evaluate(x=x_or,y=y_or)
-                    flg = True
                 depths.append(list(raw_depth_new.predict(x=x_or))[0]['depth'])
             
             depth_or = depths[0]
@@ -349,12 +335,16 @@ if __name__ == '__main__':
     )
 
     # create output folder
-    output_dir = './results/kinect/'    
-    folder_name = file_name
+    output_dir = './results/'
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
+    output_dir += 'kinect/'
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    folder_name = file_name 
     output_dir = output_dir + folder_name + '/'
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
+
 
     testing(tests, array_dir, output_dir, tof_cam, tof_net)
