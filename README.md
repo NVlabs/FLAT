@@ -9,13 +9,22 @@ In Proc. European Conference on Computer Vision (ECCV), 2018.
 ```
 
 ## Prerequisites
-The provided methods and interface are implemented in Python 3.5. Necessary packages include [TensorFlow 1.4.0](https://www.tensorflow.org/install/) (this requirese CUDA 9.0 for GPU usage), [OpenCV 3.1.0](https://docs.opencv.org/3.1.0/), and googledrivedownloader (can be installed with `pip install googledrivedownloader --user`).
+The provided methods and interface are implemented in Python 3.5. Necessary packages include [TensorFlow 1.10.0](https://www.tensorflow.org/install/) (this requires CUDA 9.0 for GPU usage), [OpenCV 3.1.0](https://docs.opencv.org/3.1.0/), and googledrivedownloader (can be installed with `pip install googledrivedownloader --user`).
 
 ## Usage
 0. Make sure your Python environment satisfies the prerequisites.
 1. Clone the repository (git clone https://github.com/guoqi1123/FLAT_pub.git). 
 2. Run `python init.py`, which will download a small fraction of synthetic raw measurements of Kinect 2, that is necessary for testing, also it will automatically download miscellaneous data files. If you would like to download all synthetic raw measurements of Kinect 2, run `python init.py -n all`. If you would like to download synthetic raw measurements of hardware described in DeepToF [1] or Phasor [2], run `python init.py -c HARDWARE_NAME`. If you would like to download the transient rendering files (generated using the transient rendering framework by Jarabo et al. [3]) and produce raw measurements of your own camera, run  `python init.py -c trans_render`. **WARNING**: the total size of transient rendering files is about 800GB.
-3. Run `python testing_NETWORK_NAME.py` in `./pipe/`, where `NETWORK_NAME` is the method name you want to test, e.g., `MOM_MRM_LF2`. Visualization results will be in `./pipe/results`.
+3. Run `python testing_NETWORK_NAME.py -n 1` in `./pipe/`, where `NETWORK_NAME` is the method name you want to test, e.g., `MOM_MRM_LF2`; this will process the first image of the dataset only. To process all images, use '-n -1' or no additional arguments. Visualization results will be in `./pipe/results`.
+
+## Organization of the folders
+The FLAT dataset is organized in the following way.
+The folder ... contains transient rendering images...
+The folder ... contains models...
+The folder ...
+
+## Reconstructing a scene using pretrained networks
+To reconstruct a scene using a pretrained network... The input is the transient rendering... Data augmentation can be done in this way... The result will be in...
 
 ## Reference
 [1] Marco, J., Hernandez, Q., Mu&#x00F1;oz, A., Dong, Y., Jarabo, A., Kim, M.H., Tong, X., Gutierrez, D.: DeepToF: Off-the-shelf real-time correction of multipath interference in time-of-flight imaging. In: ACM Transactions on Graphics (SIGGRAPH ASIA). (2017)
