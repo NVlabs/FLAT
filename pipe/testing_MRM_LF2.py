@@ -23,6 +23,8 @@ from kinect_spec import *
 import cv2
 from numpy import linalg as LA
 from scipy import signal
+import parser
+import argparse
 
 from tensorflow.contrib import learn
 from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
@@ -299,6 +301,11 @@ def testing(tests, array_dir, output_dir, tof_cam, tof_net):
     return
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser("testing MRM LF2")
+    parser.add_argument('-n', '--n-images', type=int, default = -1, help='number of images to process; -1 to process all the images')
+    args = parser.parse_args()
+
     array_dir = '../FLAT/trans_render/static/'
     data_dir = '../FLAT/kinect/'
 
@@ -311,6 +318,8 @@ if __name__ == '__main__':
     message = f.read()
     files = message.split('\n')
     tests = files[0:-1]
+    if args.n_images!=-1:
+	    tests = tests[0:args.n_images]
     tests = [data_dir+test for test in tests]
 
     # # initialize the camera model
