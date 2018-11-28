@@ -1,4 +1,3 @@
-
 # this code simulates the time-of-flight data
 # all time unit are picoseconds (1 picosec = 1e-12 sec)
 import sys
