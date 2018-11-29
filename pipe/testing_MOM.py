@@ -33,6 +33,9 @@ from testing_MRM_LF2 import data_augment
 from vis_flow import *
 from kinect_init import *
 
+import parser
+import argparse
+
 PI = 3.14159265358979323846
 raw_depth_new = 0
 flg = False
@@ -86,7 +89,7 @@ def testing_real_motion(tests, array_dir, output_dir, tof_cam, tof_net):
                 # expand the contour of v to solve the convex hull problem
                 kl = np.ones([3,3])
                 flg_int = signal.convolve2d(msk!=0, kl, mode='same')
-                flg_edge = (flg_int!=0)-(msk!=0)
+                flg_edge = (flg_int!=0).astype(int)-(msk!=0).astype(int)
 
                 v_convy = signal.convolve2d(v[:,:,0],kl, mode='same')
                 v_convy /= flg_int
@@ -279,6 +282,11 @@ def testing_real_motion(tests, array_dir, output_dir, tof_cam, tof_net):
     return
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser("testing MOM")
+    parser.add_argument('-n', '--n-images', type=int, default = -1, help ='number of images to process; -1 to process all images')
+    args = parser.parse_args()
+
     array_dir = '../FLAT/trans_render/static/'
     data_dir = '../FLAT/kinect/'
 
@@ -291,6 +299,8 @@ if __name__ == '__main__':
     message = f.read()
     files = message.split('\n')
     tests = files[0:-1]
+    if args.n_images!=-1:
+        tests = tests[0:args.n_images]
     tests = [data_dir+test for test in tests]
 
     # create the network estimator
