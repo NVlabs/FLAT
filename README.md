@@ -19,8 +19,32 @@ The provided methods and interface are implemented in Python 3.5. Necessary pack
 
 ## Organization of the folders
 The FLAT dataset is organized in the following way.
-The folder ... contains transient rendering images...
-The folder ... contains models...
+
+./FLAT
+
+The folder `./FLAT/trans_render/` contains transient rendering images. Among them, the static scenes are in `./FLAT/trans_render/static/`, the scenes with motion are in `./FLAT/trans_render/dyn/`. For now, transient rendering of 121 static scenes, and 56 dynamic scenes is online. WARNING: the total size is 576GB. Each of the `.pickle` file in the folder contains the transient rendering of a scene. One can load the data using the following code:
+
+```
+with open(FILENAME,'rb') as f:
+	data = pickle.load(f)
+
+	# copy the variables
+	cam = data['cam'] # details of the camera setting
+	scene = data['scene'] # details of the scene
+	depth_true = data['depth_true'] # true depth map
+	
+	# the transient rendering is saved in a sparse matrix
+	# prop_idx saves the index, prop_s saves the value at each idx
+	prop_idx = data['prop_idx'] 
+	prop_s = data['prop_s']
+```
+
+The code of generating raw measurements of a certain platform from the transient rendering is in `./sim/`, e.g., `./sim/kinect_prepare.py` generates kinect raw measures.
+
+The folder `./FLAT/kinect/` contains simulated kinect 2 raw measurements of 1929 scenes. For each scene, we create raw measurements in different settings, stored in different subfolders.
+
+
+ `./FLAT/kinect/full` contains raw measurements closely resembles kinect 2, `./FLAT/kinect/reflection` is with 
 The folder ...
 
 ## Reconstructing a scene using pretrained networks
