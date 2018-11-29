@@ -18,7 +18,7 @@ The provided methods and interface are implemented in Python 3.5. Necessary pack
 3. Run `python testing_NETWORK_NAME.py -n 1` in `./pipe/`, where `NETWORK_NAME` is the method name you want to test, e.g., `MOM_MRM_LF2`; this will process the first image of the dataset only. To process all images, use '-n -1' or no additional arguments. Visualization results will be in `./pipe/results`.
 
 ## Organization of the folders
-The FLAT dataset is organized in the following way.
+Once downloaded using `python init.py`. The FLAT dataset is organized in the following way.
 
 ./FLAT
 
