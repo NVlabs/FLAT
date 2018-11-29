@@ -85,7 +85,7 @@ def gen_dataset(setup):
 	if not os.path.exists(save_dir):
 		os.mkdir(save_dir)
 	if not os.path.exists(save_dir+sub_dir):
-		os.mkdir(save_dir)
+		os.mkdir(save_dir+sub_dir)
 
 	tof_cam = eval(setup+'()')
 
