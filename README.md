@@ -113,7 +113,7 @@ with open(FILENAME,'rb') as f:
 	prop_s = data['prop_s']
 ```
 
-Raw measurements of new scenes can be created by running `./sim/HARDWARENAME_prepare.py`, where `HARDWARENAME` can be `deeptof`, `phasor`, or `kinect`, and new transient rendering pickle files in `./FLAT/trans_render/`. The raw measurements of kinect can be loaded using the following code:
+Raw measurements of new scenes can be created by running `./sim/HARDWARENAME_prepare.py`, where `HARDWARENAME` can be `deeptof`, `phasor`, or `kinect`, and new transient rendering pickle files are saved in `./FLAT/trans_render/`. The raw kinect measurements can be loaded using the following code:
 
 ```
 with open(filename,'rb') as f:
@@ -122,7 +122,8 @@ meas = np.reshape(meas,(424,512,9)).astype(np.float32)
 ```
 
 ## Reconstructing a scene using pretrained networks
-Run `python testing_NETWORK_NAME.py -n 1` in `./pipe/`, where `NETWORK_NAME` is the method name you want to test, e.g., `MOM_MRM_LF2`; this will process the first image of the dataset only. To process all images, use '-n -1' or no additional arguments. Visualization results will be in `./pipe/results`.
+Run `python testing_NETWORK_NAME.py -n 1` in `./pipe/`, where `NETWORK_NAME` is the method name you want to test, e.g., `MOM_MRM_LF2`; this will process the first image of the dataset only. To process all images, use '-n -1' or no additional arguments.
+Results will be in `./pipe/results`.
 
 ## Reference
 [1] Marco, J., Hernandez, Q., Mu&#x00F1;oz, A., Dong, Y., Jarabo, A., Kim, M.H., Tong, X., Gutierrez, D.: DeepToF: Off-the-shelf real-time correction of multipath interference in time-of-flight imaging. In: ACM Transactions on Graphics (SIGGRAPH ASIA). (2017)
