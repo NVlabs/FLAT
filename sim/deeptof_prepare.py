@@ -1,3 +1,7 @@
+# license:  Copyright (C) 2018 NVIDIA Corporation.  All rights reserved.
+#           Licensed under the CC BY-NC-SA 4.0 license
+#           (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode). 
+
 # this code simulates the time-of-flight data
 # all time unit are picoseconds (1 picosec = 1e-12 sec)
 import numpy as np
