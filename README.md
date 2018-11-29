@@ -120,10 +120,11 @@ with open(filename,'rb') as f:
 	meas=np.fromfile(f, dtype=np.int32)
 meas = np.reshape(meas,(424,512,9)).astype(np.float32)
 ```
+The raw measurements of deeptof and phasor can be accessed following the original code ([deeptof](http://webdiis.unizar.es/~juliom/pubs/2017SIGA-DeepToF/), [phasor](http://www.cs.columbia.edu/CAVE/projects/phasor_imaging/)).
 
 ## Reconstructing a scene using pretrained networks
 Run `python testing_NETWORK_NAME.py -n 1` in `./pipe/`, where `NETWORK_NAME` is the method name you want to test, e.g., `MOM_MRM_LF2`; this will process the first image of the dataset only. To process all images, use '-n -1' or no additional arguments.
-Results will be in `./pipe/results`.
+Results will be saved as images in `./pipe/results`. To modify how the results are saved, one can refer to the `testing` function in each file.
 
 ## Reference
 [1] Marco, J., Hernandez, Q., Mu&#x00F1;oz, A., Dong, Y., Jarabo, A., Kim, M.H., Tong, X., Gutierrez, D.: DeepToF: Off-the-shelf real-time correction of multipath interference in time-of-flight imaging. In: ACM Transactions on Graphics (SIGGRAPH ASIA). (2017)
