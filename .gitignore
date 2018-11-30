@@ -1,0 +1,8 @@
+FLAT/*
+params/*
+admin/*
+pipe/__pycache__/*
+sim/__pycache__/*
+pipe/models/*
+pipe/results/*
+FLAT_test/*
