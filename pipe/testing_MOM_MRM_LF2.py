@@ -2,7 +2,7 @@
 #           Licensed under the CC BY-NC-SA 4.0 license
 #           (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode). 
 
-# this code simulates the time-of-flight data
+# this code runs the MOM-MRM-LF2 pipeline
 # all time unit are picoseconds (1 picosec = 1e-12 sec)
 import sys
 sys.path.insert(0,'../sim/')

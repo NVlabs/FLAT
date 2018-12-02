@@ -2,7 +2,7 @@
 #           Licensed under the CC BY-NC-SA 4.0 license
 #           (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode). 
 
-# this code simulates the time-of-flight data
+# this code runs teh MOM-LF2 pipeline
 # all time unit are picoseconds (1 picosec = 1e-12 sec)
 import sys
 sys.path.insert(0,'../sim/')
@@ -124,10 +124,8 @@ def testing_real_motion(tests, array_dir, output_dir, tof_cam, tof_net):
                 v_y = v[:,:,0].flatten()
                 xx_new = xx + v_x
                 yy_new = yy + v_y
-                # f = scipy.interpolate.interp2d(yy_new, xx_new, x[j,:,:,0], fill_value=0)
                 pts = np.stack([yy_new,xx_new],-1)
                 vals = ims[:,:,0].flatten()
-                # vals[np.where(msk.flatten()==0)]=np.nan
                 
                 im_warped = scipy.interpolate.griddata(pts,vals.flatten(),pts_new)
                 im_warped = np.reshape(im_warped,x.shape[1:3])
@@ -140,7 +138,7 @@ def testing_real_motion(tests, array_dir, output_dir, tof_cam, tof_net):
                 new_zero = np.where(x_new == 0)
                 vmin = np.nanmin(np.stack([x_or,x_new],-1))
                 vmax = np.nanmax(np.stack([x_or,x_new],-1))
-                # vmin = vmin - (vmax - vmin)*3 # adjust the range to visualize the difference
+                
                 # normalize
                 x_or = (x_or - vmin)/(vmax-vmin)
                 x_new = (x_new - vmin)/(vmax-vmin)
