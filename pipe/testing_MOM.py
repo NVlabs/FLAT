@@ -307,7 +307,7 @@ if __name__ == '__main__':
 
     # create the network estimator
     file_name = 'MOM'
-    from training_MOM import tof_net_func
+    from MOM import tof_net_func
     tof_net = learn.Estimator(
         model_fn=tof_net_func,
         model_dir="./models/kinect/"+file_name,
