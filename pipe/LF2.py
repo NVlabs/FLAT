@@ -2,7 +2,8 @@
 #           Licensed under the CC BY-NC-SA 4.0 license
 #           (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode). 
 
-# this code simulates the time-of-flight data
+# this code runs the LF2 pipeline
+# the code is based on the Libfreenect2 implementation
 # all time unit are picoseconds (1 picosec = 1e-12 sec)
 import sys
 sys.path.insert(0,'../sim/')
@@ -55,8 +56,6 @@ def data_augment(scene_n, test_dir, tof_cam):
         meas=np.fromfile(f, dtype=np.int32)
     meas = np.reshape(meas,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
     msk = kinect_mask().astype(np.float32)
-    # meas = meas * np.tile(np.expand_dims(msk,-1),[1,1,9])
-    # meas = meas / tof_cam.cam['map_max']
 
     res_gt = tof_cam.process_gt_delay_vig_dist_surf_mapmax(cam, prop_idx, prop_s, scene, depth_true)
     meas_gt = res_gt['meas']

@@ -2,7 +2,7 @@
 #           Licensed under the CC BY-NC-SA 4.0 license
 #           (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode). 
 
-# this code simulates the time-of-flight data
+# this code simulates the time-of-flight data of kinect
 # all time unit are picoseconds (1 picosec = 1e-12 sec)
 import numpy as np
 import os, json, glob
@@ -61,14 +61,9 @@ def gen_raw(scene_n, data_dir, tof_cam):
 			prop_idx = deepcopy(data['prop_idx'])
 			prop_s = deepcopy(data['prop_s'])
 
+			# create raw measurements
 			res.append(funcs[i](cam, prop_idx, prop_s, scene, depth_true))
 			cam = deepcopy(tof_cam.cam)
-
-			# # show the raw measurement
-			# fig = plt.figure()
-			# for j in range(9):ax = fig.add_subplot(3,3,j+1);plt.imshow(res[i]['meas'][:,:,j],vmin=-0.01,vmax=0.01)
-			# plt.show()
-			# pdb.set_trace()
 
 			# write some measurements to binary file for the kinect to do it
 			meas_to_file = res[-1]['meas']*tof_cam.cam['map_max']; # map back
@@ -146,15 +141,6 @@ def gen_raw_dyn(scene_n, data_dir, tof_cam):
 				cam = deepcopy(tof_cam.cam)
 				meas = res[-1]['meas']
 
-			# # show the raw measurement
-			# fig = plt.figure()
-			# for j in range(9):ax = fig.add_subplot(3,3,j+1);plt.imshow(meas[:,:,j],vmin=-0.1,vmax=0.1)
-			# fig = plt.figure()
-			# plt.imshow(meas[:,:,0])
-			# fig = plt.figure()
-			# plt.imshow(meas[:,:,-1])
-			# plt.show()
-
 			# write some measurements to binary file for the kinect to do it
 			meas_to_file = meas*tof_cam.cam['map_max']; # map back
 			msk = kinect_mask()
@@ -198,8 +184,6 @@ def data_augment_full(scene_n, test_dir, tof_cam):
 		meas=np.fromfile(f, dtype=np.int32)
 	meas = np.reshape(meas,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
 	msk = kinect_mask().astype(np.float32)
-	# meas = meas * np.tile(np.expand_dims(msk,-1),[1,1,9])
-	# meas = meas / tof_cam.cam['map_max']
 	meas_gt = meas
 
 	# reduce the resolution of the depth
@@ -220,8 +204,6 @@ def data_augment_ideal(scene_n, test_dir, tof_cam):
 		meas=np.fromfile(f, dtype=np.int32)
 	meas = np.reshape(meas,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
 	msk = kinect_mask().astype(np.float32)
-	# meas = meas * np.tile(np.expand_dims(msk,-1),[1,1,9])
-	# meas = meas / tof_cam.cam['map_max']
 	meas_gt = meas
 
 	# reduce the resolution of the depth
@@ -242,8 +224,6 @@ def data_augment_noise(scene_n, test_dir, tof_cam):
 		meas=np.fromfile(f, dtype=np.int32)
 	meas = np.reshape(meas,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
 	msk = kinect_mask().astype(np.float32)
-	# meas = meas * np.tile(np.expand_dims(msk,-1),[1,1,9])
-	# meas = meas / tof_cam.cam['map_max']
 	meas_gt = meas
 
 	# reduce the resolution of the depth
@@ -264,8 +244,6 @@ def data_augment_reflection(scene_n, test_dir, tof_cam):
 		meas=np.fromfile(f, dtype=np.int32)
 	meas = np.reshape(meas,(cam['dimy'],cam['dimx'],9)).astype(np.float32)
 	msk = kinect_mask().astype(np.float32)
-	# meas = meas * np.tile(np.expand_dims(msk,-1),[1,1,9])
-	# meas = meas / tof_cam.cam['map_max']
 	meas_gt = meas
 
 	# reduce the resolution of the depth
@@ -291,17 +269,11 @@ def pixel_class(depth, gt):
 	msk['edge'][np.where(err_ideal>0.05)] = 0
 
 	# noise 
-	# msk['noise'] = (gt - depth['noise'])*msk['edge']*msk['background']
 	msk['noise'] = (depth['ideal'] - depth['noise'])*msk['edge']*msk['background']
 
-	# fig = plt.figure()
-	# plt.imshow(np.abs(depth['ideal']-depth['noise'])*msk['edge']*msk['background'],vmin=0,vmax=0.02)
-	# plt.show()
 
 	# reflection
-	# msk['reflection'] = (gt - depth['reflection'])*msk['edge']*msk['background']
 	msk['reflection'] = (depth['ideal'] - depth['reflection'])*msk['edge']*msk['background']
-	# msk['reflection'] = (depth['ideal'])*msk['edge']*msk['background']
 
 	return msk
 
@@ -362,9 +334,6 @@ def testing_msk(tests, test_dir, tof_cam, tof_net, base_cor, cam):
 
 				# save the depth
 				depths[key] = res['depth']
-
-				# # convert distance to depth
-				# depths[key] = tof_cam.dist_to_depth(depths[key])
 	
 			# classify the pixels
 			msk = pixel_class(depths, depth_true)
@@ -426,12 +395,6 @@ def testing(tests, test_dir, output_dir, tof_cam, tof_net, base_cor, cam):
 
 				# save the depth
 				depths[key] = res['depth']
-
-				# # reshape
-				# depths[key] = cv2.resize(depths[key],(512,424))
-
-				# # convert distance to depth
-				# depths[key] = tof_cam.dist_to_depth(depths[key])
 
 			# load ground truth, convert distance to depth
 			depth_true = tof_cam.dist_to_depth(depth_true_s)

@@ -2,7 +2,7 @@
 #           Licensed under the CC BY-NC-SA 4.0 license
 #           (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode). 
 
-# this code simulates the time-of-flight data
+# this code simulates the time-of-flight data of deeptof
 # all time unit are picoseconds (1 picosec = 1e-12 sec)
 import numpy as np
 import os, json, glob
@@ -58,8 +58,8 @@ def gen_raw(scene_n, data_dir, tof_cam):
 	msk_true_s = msk['background'] * msk['edge']
 	depth_true_s = scipy.misc.imresize(depth_true,msk_array.shape[0:2],mode='F')
 
+	# simulate the raw measurement
 	res = tof_cam.process_gain_noise(cam, prop_idx, prop_s, scene, depth_true)
-	# res_gt = tof_cam.process_gt_gain_noise(cam, prop_idx, prop_s, scene, depth_true)
 	meas = res['meas']
 	dist = 3e-4*tof_cam.cam['T'][0]/4/PI*np.arctan2((meas[:,:,0]-meas[:,:,2]),(meas[:,:,1]-meas[:,:,3]))
 	dist[np.where(dist < 0)] = 7.5 + dist[np.where(dist < 0)]

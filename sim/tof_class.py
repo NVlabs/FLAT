@@ -825,38 +825,6 @@ class kinect_sin:
 			meas.append(np.sum(cor_exp * ipr_exp, 2))
 		meas = np.concatenate(meas,axis=2)
 
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# cam = self.cam
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):
-		# 	Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i])
-		# 	I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# phase[np.where(phase!=0)] += PI*2
-		# # phase[np.where(phase<0)] = PI + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(1,2,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(1,2,2)
-		# ax.imshow(depth_true)
-		# plt.show()
-		
-		# # map the data to have saturation 
-		# ratio = self.cam['map_max'] / self.cam['raw_max']
-		# meas *= ratio
-
-		# # TODO: figure out how to deal with going out of range
-		# meas[np.where(meas>self.cam['lut_max'])]=np.nan
-
-		# # mask the data to positive-negative interval
-		# for i in range(meas.shape[2]):
-		# 	meas[:,:,i] = meas[:,:,i] * self.cam['msk']
-
 		fig = plt.figure()
 		for i in range(9):
 			ax = fig.add_subplot(3,3,i+1)
@@ -903,52 +871,6 @@ class kinect_real:
 				)
 			meas.append(np.sum(cor_exp * ipr_exp, 2))
 		meas = np.concatenate(meas,axis=2)
-
-		# cam = self.cam
-		# # visualize the correlation
-		# fig = plt.figure()
-		# for i in range(len(cam['cor'])):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cam['cor'][i,:])
-		# plt.show()
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 1
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(1,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(1,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth)
-		# ax = fig.add_subplot(1,3,3)
-		# ax.imshow(depth_true)
-		# plt.show()
-		
-		# # map the data to have saturation 
-		# ratio = self.cam['map_max'] / self.cam['raw_max']
-		# meas *= ratio
-
-		# # TODO: figure out how to deal with going out of range
-		# meas[np.where(meas>self.cam['lut_max'])]=np.nan
-
-		# # mask the data to positive-negative interval
-		# for i in range(meas.shape[2]):
-		# 	meas[:,:,i] = meas[:,:,i] * self.cam['msk']
-
-		# fig = plt.figure()
-		# for i in range(9):
-		# 	ax = fig.add_subplot(3,3,i+1)
-		# 	ax.imshow(meas[:,:,i])
-		# plt.show()
-
-		# TODO: vignetting
 
 		result = {
 			'meas'	: meas
@@ -1134,8 +1056,6 @@ class kinect_real_tf:
 		meas = []
 		for i in range(cha_num):
 			# expand and compute measurement
-			# cor_cha = cor[i,:]
-			# cor_exp = tf.gather(cor_cha, ipr_idx[2,:])
 			final_idx = tf.cast(ipr_idx[2,:],self.dtype)+delay_idx[i,:]
 			cor_exp = tf.py_func(self.f[i],[final_idx], tf.float64)
 			cor_exp = tf.cast(cor_exp, self.dtype)
@@ -1286,48 +1206,6 @@ class kinect_real_tf:
 		# gain and noise
 		meas = self.sess.run(self.gng['meas_o'],feed_dict={self.gng['meas_i']:meas})
 
-		# cam = self.cam
-		# # visualize the correlation
-		# fig = plt.figure()
-		# for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# plt.show()
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(1,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(1,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth)
-		# ax = fig.add_subplot(1,3,3)
-		# ax.imshow(depth_true)
-		# plt.show()
-		
-		# # map the data to have saturation 
-		# ratio = self.cam['map_max'] / self.cam['raw_max']
-		# meas *= ratio
-
-		# # TODO: figure out how to deal with going out of range
-		# meas[np.where(meas>self.cam['lut_max'])]=np.nan
-
-		# # mask the data to positive-negative interval
-		# for i in range(meas.shape[2]):
-		# 	meas[:,:,i] = meas[:,:,i] * self.cam['msk']
-
-		# fig = plt.figure()
-		# for i in range(9):ax = fig.add_subplot(3,3,i+1);ax.imshow(meas[:,:,i]);
-		# plt.show()
-
 		result = {
 			'meas'	: meas
 		}
@@ -1355,48 +1233,6 @@ class kinect_real_tf:
 
 		# gain and noise
 		meas = self.sess.run(self.gg['meas_o'],feed_dict={self.gg['meas_i']:meas})
-
-		# cam = self.cam
-		# # visualize the correlation
-		# fig = plt.figure()
-		# for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# plt.show()
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(1,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(1,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth)
-		# ax = fig.add_subplot(1,3,3)
-		# ax.imshow(depth_true)
-		# plt.show()
-		
-		# # map the data to have saturation 
-		# ratio = self.cam['map_max'] / self.cam['raw_max']
-		# meas *= ratio
-
-		# # TODO: figure out how to deal with going out of range
-		# meas[np.where(meas>self.cam['lut_max'])]=np.nan
-
-		# # mask the data to positive-negative interval
-		# for i in range(meas.shape[2]):
-		# 	meas[:,:,i] = meas[:,:,i] * self.cam['msk']
-
-		# fig = plt.figure()
-		# for i in range(9):ax = fig.add_subplot(3,3,i+1);ax.imshow(meas[:,:,i]);
-		# plt.show()
 
 		result = {
 			'meas'	: meas
@@ -1426,8 +1262,6 @@ class kinect_real_tf:
 		meas = [self.f[i](t_idx) for i in range(cor.shape[0])]
 		meas = np.stack(meas, 2)
 
-		# # normalize based on the gain
-		# meas /= np.nanmax(np.abs(meas))
 		# normalize and change the gain
 		meas /= self.cam['raw_max']
 
@@ -1509,47 +1343,11 @@ class kinect_real_tf:
 		vig = np.tile(np.expand_dims(self.cam['vig'],-1),[1,1,9])
 		meas /= vig
 
-		# # normalize based on the gain
-		# meas /= np.nanmax(np.abs(meas))
-
 		# normalize and change the gain
 		meas /= self.cam['raw_max']
 
 		# deprecate the invalid part
 		meas[np.where(np.isnan(meas))] = 0
-
-		# cam = self.cam
-		# # # visualize the correlation
-		# # fig = plt.figure()
-		# # for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# # plt.show()
-
-		# fig=plt.figure();plt.imshow(self.cam['delay'])
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(1,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(1,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(1,3,3)
-		# ax.imshow(depth_true_s)
-		# plt.show()
-
-		# fig = plt.figure()
-		# for i in range(9):ax = fig.add_subplot(3,3,i+1);ax.imshow(meas[:,:,i]);
-		# plt.show()
 
 		result = {
 			'meas': meas
@@ -1595,39 +1393,6 @@ class kinect_real_tf:
 		# deprecate the invalid part
 		meas[np.where(np.isnan(meas))] = 0
 
-		# cam = self.cam
-		# # # visualize the correlation
-		# # fig = plt.figure()
-		# # for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# # plt.show()
-
-		# fig=plt.figure();plt.imshow(self.cam['delay'])
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(1,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(1,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(1,3,3)
-		# ax.imshow(depth_true_s)
-		# plt.show()
-
-		# fig = plt.figure()
-		# for i in range(9):ax = fig.add_subplot(3,3,i+1);ax.imshow(meas[:,:,i]);
-		# plt.show()
-
 		result = {
 			'meas': meas
 		}
@@ -1666,88 +1431,6 @@ class kinect_real_tf:
 		# gain and noise
 		meas = self.sess.run(self.gg['meas_o'],feed_dict={self.gg['meas_i']:meas})
 
-		# # normalize and change the gain
-		# meas /= self.cam['raw_max']
-
-		# # deprecate the invalid part
-		# meas[np.where(np.isnan(meas))] = 0
-
-		# cam = self.cam
-		# # # # visualize the correlation
-		# # # fig = plt.figure()
-		# # # for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# # # plt.show()
-
-		# fig=plt.figure();plt.imshow(self.cam['delay'])
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# x =phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(3,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,3)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 1
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# y = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,4)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,5)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,6)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 2
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# z = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,7)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,8)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,9)
-		# ax.imshow(depth_true_s)
-		
-		# from mpl_toolkits.mplot3d import Axes3D
-		# fig = plt.figure()
-		# ax = fig.add_subplot(111, projection='3d')
-		# ax.plot(np.sin(x.flatten()),np.sin(y.flatten()),np.sin(z.flatten()),'.',ms=0.01)
-
-		# plt.show()
-
-		# fig = plt.figure()
-		# for i in range(9):ax = fig.add_subplot(3,3,i+1);ax.imshow(meas[:,:,i]);
-		# plt.show()
-
 		result = {
 			'meas': meas
 		}
@@ -1785,88 +1468,6 @@ class kinect_real_tf:
 
 		# gain and noise
 		meas = self.sess.run(self.gng['meas_o'],feed_dict={self.gng['meas_i']:meas})
-
-		# # normalize and change the gain
-		# meas /= self.cam['raw_max']
-
-		# # deprecate the invalid part
-		# meas[np.where(np.isnan(meas))] = 0
-
-		# cam = self.cam
-		# # # # visualize the correlation
-		# # # fig = plt.figure()
-		# # # for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# # # plt.show()
-
-		# fig=plt.figure();plt.imshow(self.cam['delay'])
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# x =phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(3,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,3)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 1
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# y = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,4)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,5)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,6)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 2
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# z = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,7)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,8)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,9)
-		# ax.imshow(depth_true_s)
-		
-		# from mpl_toolkits.mplot3d import Axes3D
-		# fig = plt.figure()
-		# ax = fig.add_subplot(111, projection='3d')
-		# ax.plot(np.sin(x.flatten()),np.sin(y.flatten()),np.sin(z.flatten()),'.',ms=0.01)
-
-		# plt.show()
-
-		# fig = plt.figure()
-		# for i in range(9):ax = fig.add_subplot(3,3,i+1);ax.imshow(meas[:,:,i]);
-		# plt.show()
 
 		result = {
 			'meas': meas
@@ -1912,126 +1513,6 @@ class kinect_real_tf:
 		# gain and noise
 		meas = self.sess.run(self.gng['meas_o'],feed_dict={self.gng['meas_i']:meas})
 
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# pdb.set_trace()
-		# meas[np.where(np.tile(np.expand_dims(depth_true_s,-1),[1,1,9])<1e-4)]=0
-
-		# cam = self.cam
-		# # # # visualize the correlation
-		# # # fig = plt.figure()
-		# # # for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# # # plt.show()
-
-		# fig=plt.figure();plt.imshow(self.cam['delay'])
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# x =phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(3,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,3)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 1
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# y = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,4)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,5)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,6)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 2
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# z = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,7)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,8)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,9)
-		# ax.imshow(depth_true_s)
-		
-		# from mpl_toolkits.mplot3d import Axes3D
-		# fig = plt.figure()
-		# ax = fig.add_subplot(111, projection='3d')
-		# ax.plot(np.sin(x.flatten()),np.sin(y.flatten()),np.sin(z.flatten()),'.',ms=0.01)
-
-		# plt.show()
-
-		# cam = self.cam
-		# # # visualize the correlation
-		# # fig = plt.figure()
-		# # for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# # plt.show()
-
-		# fig=plt.figure();plt.imshow(self.cam['delay'])
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(1,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(1,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(1,3,3)
-		# ax.imshow(depth_true_s)
-		# plt.show()
-		
-		# # map the data to have saturation 
-		# ratio = self.cam['map_max'] / self.cam['raw_max']
-		# meas *= ratio
-
-		# # TODO: figure out how to deal with going out of range
-		# meas[np.where(meas>self.cam['lut_max'])]=np.nan
-
-		# # mask the data to positive-negative interval
-		# for i in range(meas.shape[2]):
-		# 	meas[:,:,i] = meas[:,:,i] * self.cam['msk']
-
-		# fig = plt.figure()
-		# for i in range(9):vmin=meas[:,:,i].min();vmax=meas[:,:,i].max();ax = fig.add_subplot(3,6,2*i+1);ax.imshow(meas[:,:,i],vmin=vmin,vmax=vmax);ax=fig.add_subplot(3,6,2*i+2);ax.imshow(meas_gt[:,:,i],vmin=vmin,vmax=vmax)
-		# plt.show()
-
 		result = {
 			'meas'	: meas
 		}
@@ -2073,50 +1554,6 @@ class kinect_real_tf:
 
 		# gain and noise
 		meas = self.sess.run(self.gg['meas_o'],feed_dict={self.gg['meas_i']:meas})
-
-		# cam = self.cam
-		# # # visualize the correlation
-		# # fig = plt.figure()
-		# # for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# # plt.show()
-
-		# fig=plt.figure();plt.imshow(self.cam['delay'])
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(1,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(1,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(1,3,3)
-		# ax.imshow(depth_true_s)
-		# plt.show()
-		
-		# # map the data to have saturation 
-		# ratio = self.cam['map_max'] / self.cam['raw_max']
-		# meas *= ratio
-
-		# # TODO: figure out how to deal with going out of range
-		# meas[np.where(meas>self.cam['lut_max'])]=np.nan
-
-		# # mask the data to positive-negative interval
-		# for i in range(meas.shape[2]):
-		# 	meas[:,:,i] = meas[:,:,i] * self.cam['msk']
-
-		# fig = plt.figure()
-		# for i in range(9):ax = fig.add_subplot(3,3,i+1);ax.imshow(meas[:,:,i]);
-		# plt.show()
 
 		result = {
 			'meas'	: meas
@@ -2170,88 +1607,6 @@ class kinect_real_tf:
 		# gain and noise
 		meas = self.sess.run(self.gng['meas_o'],feed_dict={self.gng['meas_i']:meas})
 
-		# # normalize and change the gain
-		# meas /= self.cam['raw_max']
-
-		# # deprecate the invalid part
-		# meas[np.where(np.isnan(meas))] = 0
-
-		# cam = self.cam
-		# # # # visualize the correlation
-		# # # fig = plt.figure()
-		# # # for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# # # plt.show()
-
-		# fig=plt.figure();plt.imshow(self.cam['delay'])
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# x =phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(3,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,3)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 1
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# y = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,4)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,5)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,6)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 2
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# z = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,7)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,8)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,9)
-		# ax.imshow(depth_true_s)
-		
-		# from mpl_toolkits.mplot3d import Axes3D
-		# fig = plt.figure()
-		# ax = fig.add_subplot(111, projection='3d')
-		# ax.plot(np.sin(x.flatten()),np.sin(y.flatten()),np.sin(z.flatten()),'.',ms=0.01)
-
-		# plt.show()
-
-		# fig = plt.figure()
-		# for i in range(9):ax = fig.add_subplot(3,3,i+1);ax.imshow(meas[:,:,i]);
-		# plt.show()
-
 		result = {
 			'meas': meas
 		}
@@ -2304,85 +1659,6 @@ class kinect_real_tf:
 		# normalize and change the gain
 		meas /= self.cam['raw_max']
 
-		# # deprecate the invalid part
-		# meas[np.where(np.isnan(meas))] = 0
-
-		# cam = self.cam
-		# # # # visualize the correlation
-		# # # fig = plt.figure()
-		# # # for i in range(cor.shape[0]):ax = fig.add_subplot(3,3,i+1);ax.plot(cam['t']*C/2, cor[i,:])
-		# # # plt.show()
-
-		# fig=plt.figure();plt.imshow(self.cam['delay'])
-
-		# # the generalized form of phase stepping
-		# # phase and depth
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 0
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# x =phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# fig = plt.figure()
-		# ax = fig.add_subplot(3,3,1)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,2)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,3)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 1
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# y = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,4)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,5)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,6)
-		# ax.imshow(depth_true_s)
-
-		# Q = np.zeros((cam['dimy'], cam['dimx']))
-		# I = np.zeros((cam['dimy'], cam['dimx']))
-		# freq = 2
-		# for i in range(len(cam['phase'][freq])):Q += meas[:,:,i+freq*3] * np.sin(cam['phase'][freq][i]);I += meas[:,:,i+freq*3] * np.cos(cam['phase'][freq][i])
-
-		# phase = np.arctan2(Q,I)
-		# z = phase
-		# # phase[np.where(phase!=0)] += 4*PI
-		# # phase[np.where(phase<0)] = PI*2 + phase[np.where(phase<0)]
-		# depth = phase * cam['T'][freq]/2/PI * C /2
-		# ax = fig.add_subplot(3,3,7)
-		# ax.imshow(depth)
-		# ax = fig.add_subplot(3,3,8)
-		# depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
-		# ax.imshow(depth_true_s-depth,vmin=0.33,vmax=0.41)
-		# ax = fig.add_subplot(3,3,9)
-		# ax.imshow(depth_true_s)
-		
-		# from mpl_toolkits.mplot3d import Axes3D
-		# fig = plt.figure()
-		# ax = fig.add_subplot(111, projection='3d')
-		# ax.plot(np.sin(x.flatten()),np.sin(y.flatten()),np.sin(z.flatten()),'.',ms=0.01)
-
-		# plt.show()
-
-		# fig = plt.figure()
-		# for i in range(9):ax = fig.add_subplot(3,3,i+1);ax.imshow(meas[:,:,i]);
-		# plt.show()
-
 		result = {
 			'meas': meas
 		}
@@ -2395,11 +1671,6 @@ class kinect_real_tf:
 		self.cam['dimt'] = max(cam['dimt'], int(max_t))
 		self.cam['exp'] = cam['exp']
 		cor = compute_cor(self.cam)
-
-		# fig = plt.figure()
-		# t = np.arange(cor.shape[1])*50*3e-4
-		# for i in range(9):ax=fig.add_subplot(3,3,i+1);plt.plot(t, cor[i,:])
-		# plt.show()
 
 		# create the delay function
 		self.f = []
@@ -2643,15 +1914,6 @@ class deeptof(kinect_real_tf):
 		self.cam['exp'] = cam['exp']
 		cor = self.compute_cor_deeptof(self.cam)
 
-		# # find the first nonzero time frame of each pixel
-		# y=ipr_idx[0]
-		# x=ipr_idx[1]
-		# idx = y*self.cam['dimx']+x
-		# idx_u, I = np.unique(idx, return_index=True)
-
-		# ipr_idx = (ipr_idx[0][(I,)], ipr_idx[1][(I,)], ipr_idx[2][(I,)])
-		# ipr_s = ipr_s[(I,)]
-
 		# create the delay function
 		self.f = []
 		for i in range(cor.shape[0]):
@@ -2718,9 +1980,6 @@ class deeptof(kinect_real_tf):
 					self.rg['cor']:cor,\
 				}
 			)
-
-		# gain and noise
-		# meas = self.sess.run(self.gng['meas_o'],feed_dict={self.gng['meas_i']:meas})
 
 		result = {
 			'meas'	: meas
@@ -2900,15 +2159,6 @@ class phasor(kinect_real_tf):
 		self.cam['exp'] = cam['exp']
 		cor = self.compute_cor_deeptof(self.cam)
 
-		# # find the first nonzero time frame of each pixel
-		# y=ipr_idx[0]
-		# x=ipr_idx[1]
-		# idx = y*self.cam['dimx']+x
-		# idx_u, I = np.unique(idx, return_index=True)
-
-		# ipr_idx = (ipr_idx[0][(I,)], ipr_idx[1][(I,)], ipr_idx[2][(I,)])
-		# ipr_s = ipr_s[(I,)]
-
 		# create the delay function
 		self.f = []
 		for i in range(cor.shape[0]):
@@ -2975,9 +2225,6 @@ class phasor(kinect_real_tf):
 					self.rg['cor']:cor,\
 				}
 			)
-
-		# gain and noise
-		# meas = self.sess.run(self.gng['meas_o'],feed_dict={self.gng['meas_i']:meas})
 
 		result = {
 			'meas'	: meas
