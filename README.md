@@ -19,7 +19,7 @@ The provided methods and interface are implemented in Python 3.5. Necessary pack
 
 ### Downloading the dataset
 0. Make sure your Python environment satisfies the prerequisites.
-1. Clone the repository (git clone https://github.com/guoqi1123/FLAT_pub.git). 
+1. Clone the repository (git clone https://github.com/NVlabs/FLAT.git). 
 2. Run `python init.py`, which will download a small fraction of synthetic raw measurements of Kinect 2, that is necessary for testing, also it will automatically download miscellaneous data files. If you would like to download all synthetic raw measurements, run `python init.py -n all`. If you would like to download synthetic raw measurements of hardware described in DeepToF [1], Phasor [2] or the Kinect 2, run `python init.py -c HARDWARENAME`, where `HARDWARENAME` can be `deeptof`, `phasor` or `kinect`. If you would like to download the transient rendering files (generated using the transient rendering framework by Jarabo et al. [3]) and produce raw measurements of your own camera, run  `python init.py -c trans_render`. **WARNING**: the total size of transient rendering files is about 576GB.
 
 ## Docker installation
