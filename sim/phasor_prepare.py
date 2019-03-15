@@ -21,7 +21,6 @@ from copy import deepcopy
 from joblib import Parallel, delayed
 import multiprocessing
 import scipy.sparse as sp
-from deeptof_prepare import gen_dataset
 
 from tensorflow.contrib import learn
 from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
@@ -92,8 +91,8 @@ def gen_dataset(setup):
 	funcs = [\
 		tof_cam.process_gain_noise, 
 		tof_cam.process_gt_gain_noise,
-		tof_cam.process_gt_gain,
 		tof_cam.process_gain,
+		tof_cam.process_gt_gain,
 	]
 
 	"""
@@ -102,15 +101,15 @@ def gen_dataset(setup):
 	# input the folder that contains the data
 	scenes = glob.glob(data_dir+'*.pickle')
 
-	for i in range(len(sub_dirs)):
-		sub_dir = sub_dirs[i]
+	for j in range(len(sub_dirs)):
+		sub_dir = sub_dirs[j]
 		# jump over those already finished 
 		scenes_finished = glob.glob(save_dir+sub_dir+'*')
 		scenes_finished = [scene[-16::] for scene in scenes_finished]
 
 		for i in range(len(scenes)):
-			if (scenes[i][-23:-7] in scenes) and (scenes[i][-23:-7] not in scenes_finished):
-				gen_raw(scenes[i], save_dir+sub_dir, tof_cam, funcs[i])
+			if (scenes[i][-23:-7] not in scenes_finished):
+				gen_raw(scenes[i], save_dir+sub_dir, tof_cam, funcs[j])
 
 	"""
 	Generate images for new scenes

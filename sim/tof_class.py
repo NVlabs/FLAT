@@ -2023,6 +2023,7 @@ class phasor(kinect_real_tf):
 		self.dtype= tf.float32
 		self.rg = self.res_graph()
 		self.gng = self.gain_noise_graph()
+		self.gg = self.gain_graph()
 
 		# initialize the session
 		self.sess = tf.Session()
@@ -2248,7 +2249,7 @@ class phasor(kinect_real_tf):
 			)
 
 		# gain and noise
-		meas = self.sess.run(self.gg['meas_o'],feed_dict={self.gng['meas_i']:meas})
+		meas = self.sess.run(self.gg['meas_o'],feed_dict={self.gg['meas_i']:meas})
 
 		result = {
 			'meas'	: meas
@@ -2289,7 +2290,7 @@ class phasor(kinect_real_tf):
 			)
 
 		# gain and noise
-		meas = self.sess.run(self.gg['meas_o'],feed_dict={self.gng['meas_i']:meas})
+		meas = self.sess.run(self.gg['meas_o'],feed_dict={self.gg['meas_i']:meas})
 
 		result = {
 			'meas'	: meas
