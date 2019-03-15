@@ -27,7 +27,7 @@ from tensorflow.contrib import learn
 from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
 tf.logging.set_verbosity(tf.logging.INFO)
 
-def gen_raw(scene_n, data_dir, tof_cam):
+def gen_raw(scene_n, data_dir, tof_cam, func):
 	print('Processing scene', scene_n)
 
 	# check if the file already exists
@@ -47,27 +47,14 @@ def gen_raw(scene_n, data_dir, tof_cam):
 	prop_idx = deepcopy(data['prop_idx'])
 	prop_s = deepcopy(data['prop_s'])
 
-	# load the mask and classification
-	with open('../FLAT/kinect_2/msk/'+scene_n[-23:-7],'rb') as f:
-		msk_array=np.fromfile(f, dtype=np.float32)
-	msk_array = np.reshape(msk_array,(cam['dimy'],cam['dimx'],4))
-	msk = {}
-	msk['background'] = msk_array[:,:,0]
-	msk['edge'] = msk_array[:,:,1]
-	msk['noise'] = msk_array[:,:,2]
-	msk['reflection'] = msk_array[:,:,3]
-
-	# compute mask
-	msk_true_s = msk['background'] * msk['edge']
-	depth_true_s = scipy.misc.imresize(depth_true,msk_array.shape[0:2],mode='F')
+	# generate true depth
+	depth_true_s = scipy.misc.imresize(depth_true,(cam['dimy'],cam['dimx']),mode='F')
 
 	# generate the raw measurement
-	res = tof_cam.process_gain_noise(cam, prop_idx, prop_s, scene, depth_true)
+	res = func(cam, prop_idx, prop_s, scene, depth_true)
 	meas = res['meas']
-	dist = 3e-4*tof_cam.cam['T'][0]/4/PI*np.arctan2((meas[:,:,0]-meas[:,:,2]),(meas[:,:,1]-meas[:,:,3]))
-	dist[np.where(dist < 0)] = 7.5 + dist[np.where(dist < 0)]
-	depth = dist	
 
+	# reshaping the images
 	os.mkdir(save_dir)
 	meas = meas - meas.min()
 	meas = meas / (meas.max() - meas.min())
@@ -76,6 +63,75 @@ def gen_raw(scene_n, data_dir, tof_cam):
 	for i in range(8):cv2.imwrite(save_dir+str(i)+'.png', meas[:,:,i])  
 
 	return
+
+def gen_dataset(setup):
+	"""
+	Create compact array from the dataset
+	"""
+	data_dir = '../FLAT/trans_render/static/'
+	save_dir = '../FLAT/'+setup + '/'
+	sub_dirs = [
+		'full/',   # raw measurements with both noise and reflection
+		'noise/',  # raw measurements with only noise
+		'reflection/',  # raw measurements with only reflection
+		'ideal/' # raw measurements with no noise nor reflection
+	]
+
+	if not os.path.exists(data_dir):
+		os.mkdir(data_dir)
+
+	if not os.path.exists(save_dir):
+		os.mkdir(save_dir)
+
+	for sub_dir in sub_dirs:
+		if not os.path.exists(save_dir+sub_dir):
+			os.mkdir(save_dir+sub_dir)
+
+	tof_cam = eval(setup+'()')
+
+	funcs = [\
+		tof_cam.process_gain_noise, 
+		tof_cam.process_gt_gain_noise,
+		tof_cam.process_gt_gain,
+		tof_cam.process_gain,
+	]
+
+	"""
+	Create raw measurements from compact array
+	"""
+	# input the folder that contains the data
+	scenes = glob.glob(data_dir+'*.pickle')
+
+	for i in range(len(sub_dirs)):
+		sub_dir = sub_dirs[i]
+		# jump over those already finished 
+		scenes_finished = glob.glob(save_dir+sub_dir+'*')
+		scenes_finished = [scene[-16::] for scene in scenes_finished]
+
+		for i in range(len(scenes)):
+			if (scenes[i][-23:-7] in scenes) and (scenes[i][-23:-7] not in scenes_finished):
+				gen_raw(scenes[i], save_dir+sub_dir, tof_cam, funcs[i])
+
+	"""
+	Generate images for new scenes
+	"""
+	scenes = glob.glob(save_dir+sub_dirs[0]+'*')
+
+	# file that saves the name
+	if not os.path.exists(save_dir+'list/'):
+		os.mkdir(save_dir+'list/')
+	savefile = open(save_dir + 'list/all.txt','w')
+
+	scenes_all = [\
+		scene[-16::]
+		for scene in scenes
+	]
+	for scene in scenes_all:
+		savefile.write(scene+'\n')
+			
+	savefile.close()
+
+	return 
 
 if __name__ == '__main__':
 	gen_dataset('phasor')

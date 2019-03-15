@@ -2070,7 +2070,7 @@ class phasor(kinect_real_tf):
 		meas = tf.stack(meas, 2)
 
 		return {'meas':meas,'ipr_s':ipr_s,'ipr_idx':ipr_idx,'cor':cor,'tmp':tmp,'tmp1':tmp1}
-
+	
 	def gain_noise_graph(self):
 		# shorten the name
 		cam = self.cam
@@ -2139,6 +2139,42 @@ class phasor(kinect_real_tf):
 
 		return res_dict
 
+	def gain_graph(self):
+		# shorten the name
+		cam = self.cam
+
+		# gain
+		raw_max = self.cam['raw_max']
+		map_max = self.cam['map_max']
+		lut_max = self.cam['lut_max']
+
+		# input
+		meas_i = tf.placeholder(\
+			self.dtype, 
+			[cam['dimy'],cam['dimx'],8],
+			name='meas',
+		) 
+
+		# adjust gain
+		meas = meas_i * map_max / raw_max
+
+		# thresholding
+		idx_thre = tf.where(tf.abs(meas)<map_max)
+		flg = tf.ones(tf.shape(idx_thre[:,0]),tf.int32)
+		flg_s = tf.SparseTensor(idx_thre, flg, tf.cast(tf.shape(meas),tf.int64))
+		flg_s = tf.sparse_tensor_to_dense(flg_s)
+		meas = tf.cast(meas, tf.int32) * flg_s + (1-flg_s)*map_max
+
+		# normalize to make max to equal to one
+		meas_o = meas / map_max
+
+		res_dict = {
+			'meas_i'	:	meas_i, 
+			'meas_o'	:	meas_o, 
+		}
+
+		return res_dict
+
 	def compute_cor_deeptof(self, cam):
 		# time frame
 		cam['dimt'] += 20
@@ -2156,15 +2192,11 @@ class phasor(kinect_real_tf):
 		return np.array(cor)
 
 	def process_gain_noise(self,cam,ipr_idx,ipr_s,scenes,depth_true):
+		# this function generates raw measurement of phasor WITH noise, reflection
 		# camera function: find out the non-zero part
 		self.cam['dimt'] = cam['dimt']
 		self.cam['exp'] = cam['exp']
 		cor = self.compute_cor_deeptof(self.cam)
-
-		# create the delay function
-		self.f = []
-		for i in range(cor.shape[0]):
-			self.f.append(scipy.interpolate.interp1d(np.arange(cor.shape[1]),cor[i,:]))
 
 		if not hasattr(self, 'rg'):
 			self.rg = self.res_graph()
@@ -2191,25 +2223,12 @@ class phasor(kinect_real_tf):
 		}
 		return result
 
-	def process_gt_gain_noise(self,cam,ipr_idx,ipr_s,scenes,depth_true):
+	def process_gain(self,cam,ipr_idx,ipr_s,scenes,depth_true):
+		# this function generates raw measurement of phasor with only reflection
 		# camera function: find out the non-zero part
 		self.cam['dimt'] = cam['dimt']
 		self.cam['exp'] = cam['exp']
 		cor = self.compute_cor_deeptof(self.cam)
-
-		# find the first nonzero time frame of each pixel
-		y=ipr_idx[0]
-		x=ipr_idx[1]
-		idx = y*self.cam['dimx']+x
-		idx_u, I = np.unique(idx, return_index=True)
-
-		ipr_idx = (ipr_idx[0][(I,)], ipr_idx[1][(I,)], ipr_idx[2][(I,)])
-		ipr_s = ipr_s[(I,)]
-
-		# create the delay function
-		self.f = []
-		for i in range(cor.shape[0]):
-			self.f.append(scipy.interpolate.interp1d(np.arange(cor.shape[1]),cor[i,:]))
 
 		if not hasattr(self, 'rg'):
 			self.rg = self.res_graph()
@@ -2227,6 +2246,91 @@ class phasor(kinect_real_tf):
 					self.rg['cor']:cor,\
 				}
 			)
+
+		# gain and noise
+		meas = self.sess.run(self.gg['meas_o'],feed_dict={self.gng['meas_i']:meas})
+
+		result = {
+			'meas'	: meas
+		}
+		return result
+
+	def process_gt_gain(self,cam,ipr_idx,ipr_s,scenes,depth_true):
+		# this function generates raw measurement of phasor with no noise nor reflection
+		# camera function: find out the non-zero part
+		self.cam['dimt'] = cam['dimt']
+		self.cam['exp'] = cam['exp']
+		cor = self.compute_cor_deeptof(self.cam)
+
+		# find the first nonzero time frame of each pixel
+		y=ipr_idx[0]
+		x=ipr_idx[1]
+		idx = y*self.cam['dimx']+x
+		idx_u, I = np.unique(idx, return_index=True)
+
+		ipr_idx = (ipr_idx[0][(I,)], ipr_idx[1][(I,)], ipr_idx[2][(I,)])
+		ipr_s = ipr_s[(I,)]
+
+		if not hasattr(self, 'rg'):
+			self.rg = self.res_graph()
+
+		# obtain the raw measurement
+		max_len = int(1e7) # max number for a GPU
+		meas = np.zeros((self.cam['dimy'],self.cam['dimx'],8))
+		for i in range(0,len(ipr_s),max_len):
+			end = min(len(ipr_s),i+max_len)
+			meas += self.sess.run(\
+				self.rg['meas'],
+				feed_dict={\
+					self.rg['ipr_s']:ipr_s[i:end],\
+					self.rg['ipr_idx']:np.array(ipr_idx)[:,i:end],\
+					self.rg['cor']:cor,\
+				}
+			)
+
+		# gain and noise
+		meas = self.sess.run(self.gg['meas_o'],feed_dict={self.gng['meas_i']:meas})
+
+		result = {
+			'meas'	: meas
+		}
+		return result
+
+	def process_gt_gain_noise(self,cam,ipr_idx,ipr_s,scenes,depth_true):
+		# this function generates raw measurement of phasor with only noise
+		# camera function: find out the non-zero part
+		self.cam['dimt'] = cam['dimt']
+		self.cam['exp'] = cam['exp']
+		cor = self.compute_cor_deeptof(self.cam)
+
+		# find the first nonzero time frame of each pixel
+		y=ipr_idx[0]
+		x=ipr_idx[1]
+		idx = y*self.cam['dimx']+x
+		idx_u, I = np.unique(idx, return_index=True)
+
+		ipr_idx = (ipr_idx[0][(I,)], ipr_idx[1][(I,)], ipr_idx[2][(I,)])
+		ipr_s = ipr_s[(I,)]
+
+		if not hasattr(self, 'rg'):
+			self.rg = self.res_graph()
+
+		# obtain the raw measurement
+		max_len = int(1e7) # max number for a GPU
+		meas = np.zeros((self.cam['dimy'],self.cam['dimx'],8))
+		for i in range(0,len(ipr_s),max_len):
+			end = min(len(ipr_s),i+max_len)
+			meas += self.sess.run(\
+				self.rg['meas'],
+				feed_dict={\
+					self.rg['ipr_s']:ipr_s[i:end],\
+					self.rg['ipr_idx']:np.array(ipr_idx)[:,i:end],\
+					self.rg['cor']:cor,\
+				}
+			)
+
+		# gain and noise
+		meas = self.sess.run(self.gng['meas_o'],feed_dict={self.gng['meas_i']:meas})
 
 		result = {
 			'meas'	: meas
