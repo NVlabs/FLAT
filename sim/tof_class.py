@@ -2072,7 +2072,6 @@ class phasor(kinect_real_tf):
 
 		return {'meas':meas,'ipr_s':ipr_s,'ipr_idx':ipr_idx,'cor':cor,'tmp':tmp,'tmp1':tmp1}
 	
-
 	def gain_noise_graph(self):
 		# shorten the name
 		cam = self.cam
