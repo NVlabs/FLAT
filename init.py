@@ -48,6 +48,32 @@ def main():
 	)
 	args = parser.parse_args()
 
+	# download the parameters for cameras first
+	param_id = '1qXvprK-vmS4eJJA4GimjjuqNoNPuAvpw'
+	folder = './params/'
+	if not os.path.exists(folder):
+		os.mkdir(folder)
+	if not os.path.isfile(folder+'params.zip'):
+		gdd.download_file_from_google_drive(
+			file_id=param_id,
+			dest_path=folder+'params.zip',
+			unzip=True,
+		)
+
+	# download the trained models for kinect
+	param_id = '1gVFmJ4mXkcnjjNHfgQ_BKM4v7woMUYWa'
+	os.chdir('./pipe/')
+	folder = './models/'
+	if not os.path.exists(folder):
+		os.mkdir(folder)
+	if not os.path.isfile(folder+'params.zip'):
+		gdd.download_file_from_google_drive(
+			file_id=param_id,
+			dest_path=folder+'kinect.zip',
+			unzip=True
+		)
+	os.chdir('../')
+
 	# create the local folder for the dataset
 	folder = './FLAT/'
 	if not os.path.exists(folder):
@@ -116,33 +142,6 @@ def main():
 			file_id=param_id,
 			dest_path=folder+'1499455750460059.pickle',
 			unzip=True,
-		)
-
-
-	# download the parameters
-	param_id = '1qXvprK-vmS4eJJA4GimjjuqNoNPuAvpw'
-	os.chdir('../')
-	folder = './params/'
-	if not os.path.exists(folder):
-		os.mkdir(folder)
-	if not os.path.isfile(folder+'params.zip'):
-		gdd.download_file_from_google_drive(
-			file_id=param_id,
-			dest_path=folder+'params.zip',
-			unzip=True,
-		)
-
-	# download the parameters
-	param_id = '1gVFmJ4mXkcnjjNHfgQ_BKM4v7woMUYWa'
-	os.chdir('./pipe/')
-	folder = './models/'
-	if not os.path.exists(folder):
-		os.mkdir(folder)
-	if not os.path.isfile(folder+'params.zip'):
-		gdd.download_file_from_google_drive(
-			file_id=param_id,
-			dest_path=folder+'kinect.zip',
-			unzip=True
 		)
 
 if __name__ == "__main__":

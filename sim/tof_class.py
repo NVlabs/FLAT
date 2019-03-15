@@ -1765,11 +1765,12 @@ class deeptof(kinect_real_tf):
 
 		# load the camera function
 		# camera function
-		cam['T'] 		= np.array([50000,])
+		cam['T'] 		= np.array([50000,]) # the period T = 1/frequency, the unit is 10^-12 sec
 		cam['phase'] 	= -np.array([\
 			[0*PI, 1/2*PI, PI, 3/2*PI],
-		])
-		cam['A'] = np.array([1824,])
+		])									# the phase delay of each raw measurement
+		cam['A'] = np.array([1824,])		# the amplitude of the sinusoidal, 1824 is the same as the kinect
+		cam['amb']	= np.array([0,0])			# ambient light amplitude
 		self.cam = cam
 
 		# response graph
@@ -2009,12 +2010,13 @@ class phasor(kinect_real_tf):
 
 		# load the camera function
 		# camera function
-		cam['T'] 		= np.array([940.7, 967.1])
+		cam['T'] 		= np.array([940.7, 967.1]) # the period T = 1/frequency, the unit is 10^-12 sec
 		cam['phase'] 	= -np.array([\
 			[0*PI, 1/2*PI, PI, 3/2*PI],
 			[0*PI, 1/2*PI, PI, 3/2*PI]
-		])
-		cam['A'] = np.array([1824,1824])
+		])										# the phase delay of each raw measurement
+		cam['A'] = np.array([1824,1824])		# the amplitude of the sinusoidal, 1824 is the same as the kinect
+		cam['amb']	= np.array([0,0])			# ambient light amplitude
 		self.cam = cam
 
 		# response graph
@@ -2148,7 +2150,7 @@ class phasor(kinect_real_tf):
 
 		# create the camera function
 		cor = [\
-			cam['A'][i]*np.sin(2*PI/cam['T'][i]*cam['t']-cam['phase'][i,j]) \
+			cam['A'][i]*np.sin(2*PI/cam['T'][i]*cam['t']-cam['phase'][i,j])+cam['amb'][i] \
 			for i in range(len(cam['T'])) for j in range(len(cam['phase'][i,:]))\
 		]
 		return np.array(cor)
