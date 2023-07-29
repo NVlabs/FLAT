@@ -15,12 +15,45 @@ year = {2018}
 ## Installing FLAT locally
 
 ### Prerequisites
-The provided methods and interface are implemented in Python 3.5. Necessary packages include [TensorFlow 1.9.0](https://www.tensorflow.org/install/) (this requires CUDA 9.0 for GPU usage), [OpenCV 3.1.0](https://docs.opencv.org/3.1.0/), and googledrivedownloader (can be installed with `pip install googledrivedownloader --user`).
+The provided methods and interface are implemented in Python 3.5. Necessary packages include [TensorFlow 1.9.0](https://www.tensorflow.org/install/) (this requires CUDA 9.0 for GPU usage), [OpenCV 3.1.0](https://docs.opencv.org/3.1.0/), and googledrivedownloader (can be installed with `pip install googledrivedownloader --user`). 
 
 ### Downloading the dataset
-0. Make sure your Python environment satisfies the prerequisites.
-1. Clone the repository (git clone https://github.com/NVlabs/FLAT.git). 
-2. Run `python init.py`, which will download a small fraction of synthetic raw measurements of Kinect 2, that is necessary for testing, also it will automatically download miscellaneous data files. If you would like to download all synthetic raw measurements, run `python init.py -n all`. If you would like to download synthetic raw measurements of hardware described in DeepToF [1], Phasor [2] or the Kinect 2, run `python init.py -c HARDWARENAME`, where `HARDWARENAME` can be `deeptof`, `phasor` or `kinect`. If you would like to download the transient rendering files (generated using the transient rendering framework by Jarabo et al. [3]) and produce raw measurements of your own camera, run  `python init.py -c trans_render`. **WARNING**: the total size of transient rendering files is about 576GB.
+**Updates Jul. 29th, 2023:** 
+In the root directory of the repository, run the following scripts:
+```
+mkdir FLAT
+cd FLAT
+```
+Then, based on your need, download the corresponding folders and unzip into the current directory.
+- [deeptof](https://drive.google.com/drive/folders/0B8NQpkbqgQ0SfnRJRU1OVmNOdVc4cUhXZl9HMHZ2c3QxN3FyVG9hNTZwVnBUWUhkajFYVEE?resourcekey=0-NkB-wJJ3-L1suxl6cCZhzw&usp=drive_link): Synthetic raw measurements of hardware described in DeepToF [1]. Download the entire folder.
+- [phasor](https://drive.google.com/drive/folders/0B8NQpkbqgQ0SfkdYQmFyd3VNZWFCcFV6dXVqSlh2ZUxXcHRpYlhJbnNEOUNKOEppUE9BQzg?resourcekey=0-BR_Ox2RK_ClTaEA26BB2TQ&usp=drive_link): Synthetic raw measurements of hardware described in Phasor [2]. Download the entire folder.
+- [kinect](https://drive.google.com/drive/folders/0B8NQpkbqgQ0SfnllV1ZDajhEd244NDNRUjJ3dWNFUWF2Nkx5TjFYV0FvQ2VGVHJXTFpBbUU?resourcekey=0-eXNiZuyrsFG7FpUuO1I7Ow&usp=drive_link): Synthetic raw measurements of Kinect V2. Download the entire folder.
+- [trans_render](https://drive.google.com/drive/folders/0B8NQpkbqgQ0Sfk5WcUNJTk5sdTkzempOaTVNVzdVQ2ZLbUlqU1pEME5CR0wwWjJVZ0ZqcXM?resourcekey=0-0z_OVc4bl0Ck_a72zS81DQ&usp=drive_link): The transient rendering files (generated using the transient rendering framework by Jarabo et al. [3]), this can be used to produce raw measurements of your own camera. Download the entire folder. **WARNING**: the total size of transient rendering files is about 576GB.
+
+Now, go to the root directory of the repository, run the following scripts:
+```
+mkdir params
+cd params
+```
+Download the following parameter files, and unzip into the current directory:
+- [params.zip](https://drive.google.com/file/d/13ZZ2An8xW3wizbwChmr0d8nSECcUTkt8/view?usp=drive_link): The necessary camera parameters.
+- [kinect.zip](https://drive.google.com/file/d/1cTt47nbKucZ9FtAUObaO6yfV8bpshyF-/view?usp=drive_link): The camera parameters of the kinect V2. 
+
+After the download, the file directory should look like this:
+```
+root
+├───FLAT		# FLAT Dataset
+│   ├───deeptof
+│   ├───phasor
+│   ├───kinect
+│   └───trans_render
+├───params		# camera parameters
+│   ├───deeptof
+│   ├───phasor
+│   └───kinect
+...
+```
+
 
 ## Docker installation
 
