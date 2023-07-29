@@ -15,7 +15,7 @@ year = {2018}
 ## Installing FLAT locally
 
 ### Prerequisites
-The provided methods and interface are implemented in Python 3.5. Necessary packages include [TensorFlow 1.9.0](https://www.tensorflow.org/install/) (this requires CUDA 9.0 for GPU usage), [OpenCV 3.1.0](https://docs.opencv.org/3.1.0/), and googledrivedownloader (can be installed with `pip install googledrivedownloader --user`). 
+The provided methods and interface are implemented in Python 3.5. Necessary packages include [TensorFlow 1.9.0](https://www.tensorflow.org/install/) (this requires CUDA 9.0 for GPU usage), [OpenCV 3.1.0](https://docs.opencv.org/3.1.0/).
 
 ### Downloading the dataset
 **Updates Jul. 29th, 2023:** 
