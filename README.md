@@ -69,12 +69,10 @@ RUN apt-get -y install python3-pip
 RUN pip3 install tensorflow-gpu==1.9.0
 RUN pip3 install opencv-python
 RUN apt-get -y install libglib2.0-0 libsm6 libxext6 libgtk2.0-dev
-RUN pip3 install requests
-RUN pip3 install googledrivedownloader 
 
 RUN apt-get update
 RUN apt-get -y install git --fix-missing
-RUN git clone https://<YOUR_GITHUB_UN>:<YOUR_GITHUB_pw>@github.com/guoqi1123/FLAT_pub.git
+RUN git clone https://<YOUR_GITHUB_UN>:<YOUR_GITHUB_pw>@github.com/NVlabs/FLAT.git
 
 WORKDIR FLAT_pub
 RUN pip3 install imageio matplotlib scipy joblib
