@@ -36,8 +36,8 @@ mkdir params
 cd params
 ```
 Download the following parameter files, and unzip into the current directory:
-- [params.zip](https://drive.google.com/file/d/13ZZ2An8xW3wizbwChmr0d8nSECcUTkt8/view?usp=drive_link): The necessary camera parameters.
-- [kinect.zip](https://drive.google.com/file/d/1cTt47nbKucZ9FtAUObaO6yfV8bpshyF-/view?usp=drive_link): The camera parameters of the kinect V2. 
+- [params.zip](https://drive.google.com/file/d/13ZZ2An8xW3wizbwChmr0d8nSECcUTkt8/view?usp=drive_link): The camera parameters of deeptof, phasor, and kinect.
+- [kinect.zip](https://drive.google.com/file/d/1cTt47nbKucZ9FtAUObaO6yfV8bpshyF-/view?usp=drive_link): The trained models for the Kinect V2 for our paper. (Optional.)
 
 After the download, the file directory should look like this:
 ```
